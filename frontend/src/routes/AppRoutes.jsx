@@ -32,8 +32,11 @@ const AppRoutes = () => {
         <Route path="/owners" element={<Owners />} />
         <Route path="/sponsors" element={<Sponsors />} />
         <Route path="/matches" element={<Matches />} />
+
+        <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
