@@ -1,0 +1,6 @@
+.sponsor-card img {
+  height: 180px;
+  object-fit: contain;
+  padding: 1rem;
+  background: #fff;
+}

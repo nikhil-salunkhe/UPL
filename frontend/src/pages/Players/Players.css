@@ -1,0 +1,134 @@
+.page-shell {
+  padding: 2rem 1rem 3rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 1.5rem;
+  padding: 1.5rem 2rem;
+}
+
+.page-header h1 {
+  color: white;
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.filter-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.filter-row input,
+.filter-row select {
+  padding: 0.8rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  min-width: 180px;
+}
+
+.filter-row select option {
+  background: #0f1f33;
+  color: #f5f7ff;
+}
+
+.status-card {
+  padding: 2rem;
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.06);
+  color: #eaf4ff;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.players-table-container {
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
+
+.players-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #eaf4ff;
+}
+
+.players-table thead {
+  background: linear-gradient(135deg, rgba(46,207,115,0.2), rgba(28,140,86,0.15));
+  border-bottom: 2px solid rgba(46,207,115,0.3);
+}
+
+.players-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: #2ecf73;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+}
+
+.players-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.players-table tbody tr:hover {
+  background: rgba(46,207,115,0.06);
+}
+
+.players-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.img-cell {
+  width: 60px;
+}
+
+.img-cell img {
+  width: 50px;
+  height: 50px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+
+@media (max-width: 700px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+  }
+
+  .filter-row {
+    flex-direction: column;
+  }
+
+  .filter-row input,
+  .filter-row select {
+    min-width: unset;
+  }
+
+  .players-table {
+    font-size: 0.9rem;
+  }
+
+  .players-table th,
+  .players-table td {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .img-cell img {
+    width: 40px;
+    height: 40px;
+  }
+}
