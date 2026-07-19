@@ -27,15 +27,15 @@ app.use('/api/sponsors', require('./routes/sponsorRoutes'));
 app.use('/api/tournament', require('./routes/tournamentRoutes'));
 app.use('/api/matches', require('./routes/matchRoutes'));
 
-const mongoUri = process.env.MONGODB_URI && process.env.MONGODB_URI.startsWith('mongodb')
-  ? process.env.MONGODB_URI
-  : 'mongodb://127.0.0.1:27017/upl_tournament';
+const mongoUri = process.env.MONGODB_URI;
+
+if (!mongoUri) {
+  console.error("MONGODB_URI is not configured.");
+  process.exit(1);
+}
 
 mongoose
-  .connect(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(mongoUri)
   .then(async () => {
     console.log('MongoDB connected');
 
