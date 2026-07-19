@@ -1,0 +1,1 @@
+destination: path.join(__dirname, "../uploads")
