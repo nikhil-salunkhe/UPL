@@ -177,7 +177,7 @@ const Home = () => {
                       <span className="team-logo team-logo-fallback">🏆</span>
                     )}
                     <div className="team-card-title">
-                      <h3>{owner.team || 'Auction Pending'}</h3>
+                      <h3>{owner.team || 'Team TBA'}</h3>
                       <p>Owner: {owner.name}</p>
                     </div>
                   </div>

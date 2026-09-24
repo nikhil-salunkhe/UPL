@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPlayers } from '../../services/playerService';
+import { getOwners } from '../../services/ownerService';
 import './Players.css';
 
 import { apiBaseUrl } from '../../services/api';
@@ -14,8 +15,29 @@ const getImageSrc = (player) => {
   return `${apiBaseUrl}${player.image.startsWith('/') ? player.image : `/${player.image}`}`;
 };
 
+// Before the auction, captain/vice-captain are already decided on the owner
+// record — derive their team from it instead of showing "Auction Pending".
+const getPlayerTeam = (player, owners) => {
+  if (player.team) return player.team;
+  const owner = owners.find(
+    (o) => o.captain === player.name || o.viceCaptain === player.name
+  );
+  return owner?.team || '';
+};
+
+const getLeaderBadge = (player, owners) => {
+  if (owners.some((o) => o.captain === player.name)) {
+    return { label: 'C', className: 'captain-badge' };
+  }
+  if (owners.some((o) => o.viceCaptain === player.name)) {
+    return { label: 'VC', className: 'vice-badge' };
+  }
+  return null;
+};
+
 const Players = () => {
   const [players, setPlayers] = useState([]);
+  const [owners, setOwners] = useState([]);
   const [search, setSearch] = useState('');
   const [team, setTeam] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -23,8 +45,9 @@ const Players = () => {
   useEffect(() => {
     const loadPlayers = async () => {
       try {
-        const data = await getPlayers();
-        setPlayers(data);
+        const [playerData, ownerData] = await Promise.all([getPlayers(), getOwners()]);
+        setPlayers(playerData);
+        setOwners(ownerData);
       } catch (error) {
         console.error(error);
       } finally {
@@ -35,15 +58,18 @@ const Players = () => {
     loadPlayers();
   }, []);
 
-  const teams = useMemo(() => ['All', ...new Set(players.map((player) => player.team).filter(Boolean))], [players]);
+  const teams = useMemo(
+    () => ['All', ...new Set(players.map((player) => getPlayerTeam(player, owners)).filter(Boolean))],
+    [players, owners]
+  );
 
   const filteredPlayers = useMemo(() => {
     return players.filter((player) => {
       const matchesSearch = player.name.toLowerCase().includes(search.toLowerCase());
-      const matchesTeam = team === 'All' || player.team === team;
+      const matchesTeam = team === 'All' || getPlayerTeam(player, owners) === team;
       return matchesSearch && matchesTeam;
     });
-  }, [players, search, team]);
+  }, [players, owners, search, team]);
 
   return (
     <div className="page-shell">
@@ -79,15 +105,25 @@ const Players = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredPlayers.map((player) => (
-                <tr key={player._id}>
-                  <td className="img-cell"><img src={getImageSrc(player)} alt={player.name} /></td>
-                  <td>{player.name}</td>
-                  <td>{player.role}</td>
-                  <td>{player.age ?? '—'}</td>
-                  <td>{player.team || 'Auction Pending'}</td>
-                </tr>
-              ))}
+              {filteredPlayers.map((player) => {
+                const badge = getLeaderBadge(player, owners);
+                const displayTeam = getPlayerTeam(player, owners);
+
+                return (
+                  <tr key={player._id}>
+                    <td className="img-cell"><img src={getImageSrc(player)} alt={player.name} /></td>
+                    <td>
+                      <span className="player-name">
+                        <span className="player-name-text">{player.name}</span>
+                        {badge && <span className={badge.className}>{badge.label}</span>}
+                      </span>
+                    </td>
+                    <td>{player.role}</td>
+                    <td>{player.age ?? '—'}</td>
+                    <td>{displayTeam || <span className="team-pending">—</span>}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

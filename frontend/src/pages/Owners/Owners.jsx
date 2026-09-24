@@ -84,7 +84,7 @@ const Owners = () => {
                 <tr key={owner._id}>
                   <td className="img-cell"><img src={getImageSrc(owner)} alt={owner.name} /></td>
                   <td>{owner.name}</td>
-                  <td>{owner.team || 'Auction Pending'}</td>
+                  <td>{owner.team || <span className="team-pending">—</span>}</td>
                   <td>{owner.captain ? renderLeader(owner.captain) : <span className="leader-empty">TBD</span>}</td>
                   <td>{owner.viceCaptain ? renderLeader(owner.viceCaptain) : <span className="leader-empty">TBD</span>}</td>
                   <td>{owner.phone}</td>
