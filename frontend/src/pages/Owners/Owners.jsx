@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getOwners } from '../../services/ownerService';
+import { getPlayers } from '../../services/playerService';
+import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import { apiBaseUrl } from '../../services/api';
 import './Owners.css';
 
@@ -15,13 +17,20 @@ const getImageSrc = (owner) => {
 
 const Owners = () => {
   const [owners, setOwners] = useState([]);
+  const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const playersByName = useMemo(
+    () => Object.fromEntries(players.map((player) => [player.name, player])),
+    [players]
+  );
 
   useEffect(() => {
     const loadOwners = async () => {
       try {
-        const data = await getOwners();
-        setOwners(data);
+        const [ownerData, playerData] = await Promise.all([getOwners(), getPlayers()]);
+        setOwners(ownerData);
+        setPlayers(playerData);
       } catch (error) {
         console.error(error);
       } finally {
@@ -31,6 +40,18 @@ const Owners = () => {
 
     loadOwners();
   }, []);
+
+  const renderLeader = (name) => {
+    if (!name) {
+      return <span className="leader-empty">TBD</span>;
+    }
+    return (
+      <span className="player-cell">
+        <PlayerAvatar player={playersByName[name]} name={name} size={32} />
+        {name}
+      </span>
+    );
+  };
 
   return (
     <div className="page-shell">
@@ -64,8 +85,8 @@ const Owners = () => {
                   <td className="img-cell"><img src={getImageSrc(owner)} alt={owner.name} /></td>
                   <td>{owner.name}</td>
                   <td>{owner.team || 'Auction Pending'}</td>
-                  <td>{owner.captain || 'TBD'}</td>
-                  <td>{owner.viceCaptain || 'TBD'}</td>
+                  <td>{owner.captain ? renderLeader(owner.captain) : <span className="leader-empty">TBD</span>}</td>
+                  <td>{owner.viceCaptain ? renderLeader(owner.viceCaptain) : <span className="leader-empty">TBD</span>}</td>
                   <td>{owner.phone}</td>
                 </tr>
               ))}

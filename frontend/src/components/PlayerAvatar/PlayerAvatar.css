@@ -1,0 +1,27 @@
+.player-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.player-avatar-fallback {
+  background: linear-gradient(135deg, rgba(46, 207, 115, 0.75), rgba(28, 140, 86, 0.75));
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.player-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.leader-empty {
+  color: #9fb3c8;
+}

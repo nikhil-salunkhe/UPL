@@ -6,6 +6,7 @@ import { createOwner, deleteOwner, getOwners, updateOwner } from '../../services
 import { createSponsor, deleteSponsor, getSponsors, updateSponsor } from '../../services/sponsorService';
 import { getTournament, saveTournament } from '../../services/tournamentService';
 import { getMatches, createMatch, updateMatch, deleteMatch } from '../../services/matchService';
+import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import './Admin.css';
 
 const emptyPlayer = { name: '', age: '', role: 'Batsman', team: '', image: '' };
@@ -253,6 +254,9 @@ const AdminDashboard = () => {
   // Get unique team names from registered owners (filter out empty/auction pending)
   const registeredTeams = [...new Set(owners.map(o => o.team).filter(t => t && t !== 'Auction Pending'))];
 
+  const selectedCaptain = players.find((player) => player.name === ownerForm.captain);
+  const selectedViceCaptain = players.find((player) => player.name === ownerForm.viceCaptain);
+
   return (
     <div className="admin-dashboard">
       <aside className="sidebar">
@@ -315,13 +319,49 @@ const AdminDashboard = () => {
               <input value={ownerForm.name} onChange={(e) => setOwnerForm({ ...ownerForm, name: e.target.value })} placeholder="Owner Name" required />
               <input value={ownerForm.phone} onChange={(e) => setOwnerForm({ ...ownerForm, phone: e.target.value })} placeholder="Phone" required />
               <input value={ownerForm.team} onChange={(e) => setOwnerForm({ ...ownerForm, team: e.target.value })} placeholder="Team Name" required />
-              <datalist id="owner-player-options">
+              <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Captain (select from added players)</label>
+              <select value={ownerForm.captain} onChange={(e) => setOwnerForm({ ...ownerForm, captain: e.target.value })}>
+                <option value="">-- Select Captain --</option>
                 {players.map((player) => (
-                  <option key={player._id} value={player.name} />
+                  <option key={player._id} value={player.name} disabled={player.name === ownerForm.viceCaptain}>
+                    {player.name}{player.team ? ` — ${player.team}` : ''}
+                  </option>
                 ))}
-              </datalist>
-              <input list="owner-player-options" value={ownerForm.captain} onChange={(e) => setOwnerForm({ ...ownerForm, captain: e.target.value })} placeholder="Captain (select or type name)" />
-              <input list="owner-player-options" value={ownerForm.viceCaptain} onChange={(e) => setOwnerForm({ ...ownerForm, viceCaptain: e.target.value })} placeholder="Vice Captain (select or type name)" />
+                {ownerForm.captain && !players.some((player) => player.name === ownerForm.captain) && (
+                  <option value={ownerForm.captain}>{ownerForm.captain}</option>
+                )}
+              </select>
+              <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Vice Captain (select from added players)</label>
+              <select value={ownerForm.viceCaptain} onChange={(e) => setOwnerForm({ ...ownerForm, viceCaptain: e.target.value })}>
+                <option value="">-- Select Vice Captain --</option>
+                {players.map((player) => (
+                  <option key={player._id} value={player.name} disabled={player.name === ownerForm.captain}>
+                    {player.name}{player.team ? ` — ${player.team}` : ''}
+                  </option>
+                ))}
+                {ownerForm.viceCaptain && !players.some((player) => player.name === ownerForm.viceCaptain) && (
+                  <option value={ownerForm.viceCaptain}>{ownerForm.viceCaptain}</option>
+                )}
+              </select>
+              {players.length === 0 && (
+                <p style={{ fontSize: '0.8rem', color: '#ffd96f' }}>No players added yet — add players first to select captain &amp; vice captain.</p>
+              )}
+              {(selectedCaptain || selectedViceCaptain) && (
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {selectedCaptain && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '2rem', padding: '0.35rem 0.85rem 0.35rem 0.35rem' }}>
+                      <PlayerAvatar player={selectedCaptain} size={36} />
+                      <span style={{ fontSize: '0.85rem', color: '#eaf4ff' }}><strong style={{ color: '#ffd96f' }}>C:</strong> {selectedCaptain.name}</span>
+                    </div>
+                  )}
+                  {selectedViceCaptain && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '2rem', padding: '0.35rem 0.85rem 0.35rem 0.35rem' }}>
+                      <PlayerAvatar player={selectedViceCaptain} size={36} />
+                      <span style={{ fontSize: '0.85rem', color: '#eaf4ff' }}><strong style={{ color: '#ffd96f' }}>VC:</strong> {selectedViceCaptain.name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
               <input type="file" onChange={(e) => setOwnerForm({ ...ownerForm, image: e.target.files[0] })} />
               <button type="submit">Save Owner</button>
             </form>
@@ -331,7 +371,16 @@ const AdminDashboard = () => {
                   <div>
                     <strong>{owner.name}</strong>
                     <p>{owner.team || 'Auction Pending'}</p>
-                    <p>Captain: {owner.captain || 'TBD'} · Vice Captain: {owner.viceCaptain || 'TBD'}</p>
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.85rem' }}>
+                      <span className="player-cell">
+                        {owner.captain && <PlayerAvatar player={players.find((player) => player.name === owner.captain)} name={owner.captain} size={24} />}
+                        C: {owner.captain || 'TBD'}
+                      </span>
+                      <span className="player-cell">
+                        {owner.viceCaptain && <PlayerAvatar player={players.find((player) => player.name === owner.viceCaptain)} name={owner.viceCaptain} size={24} />}
+                        VC: {owner.viceCaptain || 'TBD'}
+                      </span>
+                    </p>
                   </div>
                   <div className="admin-actions">
                     <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
