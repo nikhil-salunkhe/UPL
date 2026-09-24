@@ -18,7 +18,7 @@ const PlayerCard = ({ player }) => {
       <div className="card-body">
         <h3>{player.name}</h3>
         <p><strong>Role:</strong> {player.role}</p>
-        <p><strong>Age:</strong> {player.age}</p>
+        {player.age != null && <p><strong>Age:</strong> {player.age}</p>}
         <p><strong>Jersey:</strong> #{player.jerseyNumber}</p>
         <p><strong>Team:</strong> {player.team || 'Auction Pending'}</p>
       </div>

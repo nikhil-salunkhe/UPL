@@ -84,7 +84,7 @@ const Players = () => {
                   <td className="img-cell"><img src={getImageSrc(player)} alt={player.name} /></td>
                   <td>{player.name}</td>
                   <td>{player.role}</td>
-                  <td>{player.age}</td>
+                  <td>{player.age ?? '—'}</td>
                   <td>{player.team || 'Auction Pending'}</td>
                 </tr>
               ))}

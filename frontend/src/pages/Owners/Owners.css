@@ -82,22 +82,137 @@
   border: 2px solid rgba(255,255,255,0.1);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
+  .page-shell {
+    padding: 1.2rem 0.7rem 2rem;
+  }
+
   .page-header {
     flex-direction: column;
     align-items: stretch;
     padding: 1rem;
+    border-radius: 1.1rem;
+    margin-bottom: 1rem;
   }
-}
 
-@media (max-width: 700px) {
-  .owners-table th,
+  .page-header h1 {
+    font-size: 1.45rem;
+  }
+
+  .status-card {
+    padding: 1.2rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 0.9rem;
+  }
+
+  /* One-line compact owner/team rows */
+  .owners-table-container {
+    border-radius: 0.9rem;
+    overflow: hidden;
+  }
+
+  .owners-table thead {
+    display: none;
+  }
+
+  .owners-table,
+  .owners-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .owners-table tbody tr {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .owners-table tbody tr:active {
+    background: rgba(46,207,115,0.08);
+  }
+
+  .owners-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
   .owners-table td {
-    padding: 0.7rem 0.8rem;
+    display: block;
+    border: none;
+    padding: 0;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    color: #cfe9ff;
   }
 
-  .img-cell img {
-    width: 40px;
-    height: 40px;
+  .owners-table td.img-cell {
+    width: auto;
+    flex-shrink: 0;
+    order: 0;
+  }
+
+  .owners-table td.img-cell img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  .owners-table td:nth-child(2) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #ffffff;
+    order: 1;
+  }
+
+  /* Team chip moves to the far right */
+  .owners-table td:nth-child(3) {
+    order: 4;
+    min-width: 0;
+    max-width: 38%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.72rem;
+    color: #b8f3cf;
+    background: rgba(46,207,115,0.12);
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+  }
+
+  /* Captain / Vice-captain: avatar-only circles */
+  .owners-table td:nth-child(4) {
+    order: 2;
+    flex-shrink: 0;
+  }
+
+  .owners-table td:nth-child(5) {
+    order: 3;
+    flex-shrink: 0;
+  }
+
+  .owners-table td:nth-child(4) .player-cell,
+  .owners-table td:nth-child(5) .player-cell {
+    gap: 0;
+    font-size: 0;
+  }
+
+  .owners-table .player-avatar {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 9px !important;
+    border-width: 1px;
+  }
+
+  .owners-table .leader-empty {
+    display: none;
+  }
+
+  /* Phone hidden on mobile */
+  .owners-table td:nth-child(6) {
+    display: none;
   }
 }

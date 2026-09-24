@@ -1,6 +1,12 @@
 const Player = require('../models/Player');
 const { isMongoConnected, getPlayers: getStorePlayers, createPlayer: createStorePlayer, updatePlayer: updateStorePlayer, deletePlayer: deleteStorePlayer } = require('../config/fallbackStore');
 
+const parseAge = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 exports.getPlayers = async (req, res) => {
   try {
     if (!isMongoConnected()) {
@@ -17,11 +23,15 @@ exports.createPlayer = async (req, res) => {
   try {
     const payload = {
       name: req.body.name,
-      age: Number(req.body.age),
       role: req.body.role,
       team: req.body.team || '',
       image: req.file ? `/uploads/${req.file.filename}` : ''
     };
+
+    const age = parseAge(req.body.age);
+    if (age !== null) {
+      payload.age = age;
+    }
 
     if (!isMongoConnected()) {
       const player = createStorePlayer(payload);
@@ -39,10 +49,14 @@ exports.updatePlayer = async (req, res) => {
   try {
     const updateData = {
       name: req.body.name,
-      age: Number(req.body.age),
       role: req.body.role,
       team: req.body.team || ''
     };
+
+    const age = parseAge(req.body.age);
+    if (age !== null) {
+      updateData.age = age;
+    }
 
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;

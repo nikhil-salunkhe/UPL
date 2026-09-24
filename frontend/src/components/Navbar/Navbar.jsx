@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import './Navbar.css';
 
 const Navbar = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const links = [
     { to: '/', label: 'Home' },
     { to: '/players', label: 'Players' },
@@ -19,9 +22,23 @@ const Navbar = () => {
           <p>Community Cricket Festival</p>
         </div>
       </div>
-      <nav className="nav-links">
+      <button
+        type="button"
+        className="nav-toggle"
+        aria-label="Toggle navigation menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        {menuOpen ? '✕' : '☰'}
+      </button>
+      <nav className={`nav-links${menuOpen ? ' open' : ''}`}>
         {links.map((link) => (
-          <NavLink key={link.to} to={link.to} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            onClick={() => setMenuOpen(false)}
+          >
             {link.label}
           </NavLink>
         ))}

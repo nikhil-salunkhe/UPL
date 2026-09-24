@@ -9,7 +9,7 @@ import { getMatches, createMatch, updateMatch, deleteMatch } from '../../service
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import './Admin.css';
 
-const emptyPlayer = { name: '', age: '', role: 'Batsman', team: '', image: '' };
+const emptyPlayer = { name: '', role: 'Batsman', team: '', image: '' };
 const emptyOwner = { name: '', phone: '', team: '', captain: '', viceCaptain: '', image: '' };
 const emptySponsor = { companyName: '', sponsoredPrice: '', phone: '', logo: '' };
 const emptyTournament = { auctionDate: '', matchStartDate: '', matchEndDate: '', lotA: 'Lot A', lotB: 'Lot B', lotADay: 1, lotBDay: 2, venue: 'जुगाइदेवी स्टेडियम उरूल' };
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
     Object.entries(playerForm).forEach(([key, value]) => {
       if (key === 'image') {
         if (value) payload.append('image', value);
-      } else {
+      } else if (value !== undefined && value !== null) {
         payload.append(key, value);
       }
     });
@@ -285,7 +285,6 @@ const AdminDashboard = () => {
             <form className="admin-form" onSubmit={handlePlayerSubmit}>
               <h3>{editingPlayerId ? 'Edit Player' : 'Add Player'}</h3>
               <input value={playerForm.name} onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })} placeholder="Player Name" required />
-              <input value={playerForm.age} onChange={(e) => setPlayerForm({ ...playerForm, age: e.target.value })} placeholder="Age" required />
               <select value={playerForm.role} onChange={(e) => setPlayerForm({ ...playerForm, role: e.target.value })} required>
                 <option value="Batsman">Batsman</option>
                 <option value="Bowler">Bowler</option>
@@ -303,7 +302,7 @@ const AdminDashboard = () => {
                     <p>{player.team}</p>
                   </div>
                   <div className="admin-actions">
-                    <button onClick={() => { setPlayerForm({ ...playerForm, ...player, image: '' }); setEditingPlayerId(player._id); }}>Edit</button>
+                    <button onClick={() => { setPlayerForm({ ...emptyPlayer, ...player, image: '' }); setEditingPlayerId(player._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('player', player._id)}>Delete</button>
                   </div>
                 </div>

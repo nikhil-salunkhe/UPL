@@ -103,32 +103,119 @@
 }
 
 @media (max-width: 700px) {
+  .page-shell {
+    padding: 1.2rem 0.7rem 2rem;
+  }
+
   .page-header {
     flex-direction: column;
     align-items: stretch;
     padding: 1rem;
+    border-radius: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.45rem;
   }
 
   .filter-row {
     flex-direction: column;
+    gap: 0.5rem;
   }
 
   .filter-row input,
   .filter-row select {
     min-width: unset;
-  }
-
-  .players-table {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
     font-size: 0.9rem;
   }
 
-  .players-table th,
-  .players-table td {
-    padding: 0.6rem 0.8rem;
+  .status-card {
+    padding: 1.2rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 0.9rem;
   }
 
-  .img-cell img {
-    width: 40px;
-    height: 40px;
+  /* One-line compact player rows */
+  .players-table-container {
+    border-radius: 0.9rem;
+  }
+
+  .players-table thead {
+    display: none;
+  }
+
+  .players-table,
+  .players-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .players-table tbody tr {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .players-table tbody tr:active {
+    background: rgba(46,207,115,0.08);
+  }
+
+  .players-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .players-table td {
+    display: block;
+    border: none;
+    padding: 0;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    color: #cfe9ff;
+  }
+
+  .players-table td.img-cell {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .players-table td.img-cell img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  .players-table td:nth-child(2) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #ffffff;
+  }
+
+  .players-table td:nth-child(3) {
+    color: #b8f3cf;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .players-table td:nth-child(4) {
+    display: none;
+  }
+
+  .players-table td:nth-child(5) {
+    min-width: 0;
+    max-width: 34%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.75rem;
+    color: #9fb3c8;
   }
 }
