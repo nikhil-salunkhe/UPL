@@ -1,27 +1,32 @@
 import { useEffect, useState } from 'react';
 import { getPlayers } from '../../services/playerService';
 import { getOwners } from '../../services/ownerService';
-import { getSponsors } from '../../services/sponsorService';
 import { getTournament } from '../../services/tournamentService';
+import { apiBaseUrl } from '../../services/api';
+import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import Hero from '../../components/Hero/Hero';
 import './Home.css';
+
+const getOwnerImageSrc = (owner) => {
+  if (!owner.image) return '';
+  if (owner.image.startsWith('http')) return owner.image;
+  return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
+};
 
 const Home = () => {
   const [players, setPlayers] = useState([]);
   const [owners, setOwners] = useState([]);
-  const [sponsors, setSponsors] = useState([]);
   const [tournament, setTournament] = useState(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [playersData, ownersData, sponsorsData, tournamentData] = await Promise.all([
-          getPlayers(), getOwners(), getSponsors(), getTournament()
+        const [playersData, ownersData, tournamentData] = await Promise.all([
+          getPlayers(), getOwners(), getTournament()
         ]);
         setPlayers(playersData);
         setOwners(ownersData);
-        setSponsors(sponsorsData);
         setTournament(tournamentData);
       } catch (error) {
         console.error('Failed to load home data', error);
@@ -148,23 +153,56 @@ const Home = () => {
         </section>
       )}
 
-      <section className="section stats-section">
-        <div className="stat-card">
-          <h3>{players.length + owners.length + sponsors.length}</h3>
-          <p>Total Profiles</p>
+      <section className="section teams-section">
+        <div className="section-heading">
+          <p className="eyebrow">Teams & Leaders</p>
+          <h2>Teams, Owners & Captains</h2>
         </div>
-        <div className="stat-card">
-          <h3>{players.length}</h3>
-          <p>Total Players</p>
-        </div>
-        <div className="stat-card">
-          <h3>{owners.length}</h3>
-          <p>Total Owners</p>
-        </div>
-        <div className="stat-card">
-          <h3>{sponsors.length}</h3>
-          <p>Total Sponsors</p>
-        </div>
+
+        {owners.length === 0 ? (
+          <div className="status-card">Teams will be announced after the auction.</div>
+        ) : (
+          <div className="teams-grid">
+            {owners.map((owner) => {
+              const captainPlayer = players.find((player) => player.name === owner.captain);
+              const viceCaptainPlayer = players.find((player) => player.name === owner.viceCaptain);
+              const ownerImage = getOwnerImageSrc(owner);
+
+              return (
+                <article className="team-card" key={owner._id}>
+                  <div className="team-card-top">
+                    {ownerImage ? (
+                      <img className="team-logo" src={ownerImage} alt={owner.team || owner.name} />
+                    ) : (
+                      <span className="team-logo team-logo-fallback">🏆</span>
+                    )}
+                    <div className="team-card-title">
+                      <h3>{owner.team || 'Auction Pending'}</h3>
+                      <p>Owner: {owner.name}</p>
+                    </div>
+                  </div>
+
+                  <div className="team-leaders">
+                    <div className="leader-row">
+                      <span className="leader-badge c">C</span>
+                      {owner.captain && <PlayerAvatar player={captainPlayer} name={owner.captain} size={26} />}
+                      <span className={`leader-name${owner.captain ? '' : ' empty'}`}>
+                        {owner.captain || 'To be announced'}
+                      </span>
+                    </div>
+                    <div className="leader-row">
+                      <span className="leader-badge vc">VC</span>
+                      {owner.viceCaptain && <PlayerAvatar player={viceCaptainPlayer} name={owner.viceCaptain} size={26} />}
+                      <span className={`leader-name${owner.viceCaptain ? '' : ' empty'}`}>
+                        {owner.viceCaptain || 'To be announced'}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
