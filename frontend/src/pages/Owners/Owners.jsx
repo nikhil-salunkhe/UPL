@@ -15,6 +15,14 @@ const getImageSrc = (owner) => {
   return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
 };
 
+const cleanLeaderName = (name) => {
+  if (typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  if (/^(data|blob|https?):/i.test(trimmed) || trimmed.length > 80) return '';
+  return trimmed;
+};
+
 const Owners = () => {
   const [owners, setOwners] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -42,13 +50,14 @@ const Owners = () => {
   }, []);
 
   const renderLeader = (name) => {
-    if (!name) {
+    const clean = cleanLeaderName(name);
+    if (!clean) {
       return <span className="leader-empty">TBD</span>;
     }
     return (
       <span className="player-cell">
-        <PlayerAvatar player={playersByName[name]} name={name} size={32} />
-        {name}
+        <PlayerAvatar player={playersByName[clean]} name={clean} size={32} />
+        {clean}
       </span>
     );
   };

@@ -15,21 +15,31 @@ const getImageSrc = (player) => {
   return `${apiBaseUrl}${player.image.startsWith('/') ? player.image : `/${player.image}`}`;
 };
 
+// Captain / vice-captain are player NAMES — guard against corrupted records
+// where an image data URL ended up in these fields.
+const cleanLeaderName = (name) => {
+  if (typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  if (/^(data|blob|https?):/i.test(trimmed) || trimmed.length > 80) return '';
+  return trimmed;
+};
+
 // Before the auction, captain/vice-captain are already decided on the owner
 // record — derive their team from it instead of showing "Auction Pending".
 const getPlayerTeam = (player, owners) => {
   if (player.team) return player.team;
   const owner = owners.find(
-    (o) => o.captain === player.name || o.viceCaptain === player.name
+    (o) => cleanLeaderName(o.captain) === player.name || cleanLeaderName(o.viceCaptain) === player.name
   );
   return owner?.team || '';
 };
 
 const getLeaderBadge = (player, owners) => {
-  if (owners.some((o) => o.captain === player.name)) {
+  if (owners.some((o) => cleanLeaderName(o.captain) === player.name)) {
     return { label: 'C', className: 'captain-badge' };
   }
-  if (owners.some((o) => o.viceCaptain === player.name)) {
+  if (owners.some((o) => cleanLeaderName(o.viceCaptain) === player.name)) {
     return { label: 'VC', className: 'vice-badge' };
   }
   return null;

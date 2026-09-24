@@ -11,16 +11,28 @@ const OwnerCard = ({ owner, players = [] }) => {
     return image.startsWith('http') ? image : `${apiBaseUrl}${image.startsWith('/') ? image : `/${image}`}`;
   };
 
-  const findPlayer = (name) => players.find((player) => player.name === name);
+  const cleanLeaderName = (name) => {
+    if (typeof name !== 'string') return '';
+    const clean = name.trim();
+    if (!clean || /^(data|blob|https?):/i.test(clean) || clean.length > 80) return '';
+    return clean;
+  };
+
+  const findPlayer = (name) => {
+    const clean = cleanLeaderName(name);
+    if (!clean) return undefined;
+    return players.find((player) => player.name === clean);
+  };
 
   const renderLeader = (name) => {
-    if (!name) {
+    const clean = cleanLeaderName(name);
+    if (!clean) {
       return <span className="leader-empty">TBD</span>;
     }
     return (
       <span className="player-cell">
-        <PlayerAvatar player={findPlayer(name)} name={name} size={28} />
-        {name}
+        <PlayerAvatar player={findPlayer(clean)} name={clean} size={28} />
+        {clean}
       </span>
     );
   };

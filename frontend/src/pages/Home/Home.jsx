@@ -13,6 +13,15 @@ const getOwnerImageSrc = (owner) => {
   return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
 };
 
+const cleanLeaderName = (name) => {
+  if (typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  // Guard against corrupted records where an image data URL was saved as captain
+  if (/^(data|blob|https?):/i.test(trimmed) || trimmed.length > 80) return '';
+  return trimmed;
+};
+
 const Home = () => {
   const [players, setPlayers] = useState([]);
   const [owners, setOwners] = useState([]);
@@ -164,8 +173,10 @@ const Home = () => {
         ) : (
           <div className="teams-grid">
             {owners.map((owner) => {
-              const captainPlayer = players.find((player) => player.name === owner.captain);
-              const viceCaptainPlayer = players.find((player) => player.name === owner.viceCaptain);
+              const captain = cleanLeaderName(owner.captain);
+              const viceCaptain = cleanLeaderName(owner.viceCaptain);
+              const captainPlayer = captain ? players.find((player) => player.name === captain) : undefined;
+              const viceCaptainPlayer = viceCaptain ? players.find((player) => player.name === viceCaptain) : undefined;
               const ownerImage = getOwnerImageSrc(owner);
 
               return (
@@ -185,16 +196,16 @@ const Home = () => {
                   <div className="team-leaders">
                     <div className="leader-row">
                       <span className="leader-badge c">C</span>
-                      {owner.captain && <PlayerAvatar player={captainPlayer} name={owner.captain} size={26} />}
-                      <span className={`leader-name${owner.captain ? '' : ' empty'}`}>
-                        {owner.captain || 'To be announced'}
+                      {captain && <PlayerAvatar player={captainPlayer} name={captain} size={26} />}
+                      <span className={`leader-name${captain ? '' : ' empty'}`}>
+                        {captain || 'To be announced'}
                       </span>
                     </div>
                     <div className="leader-row">
                       <span className="leader-badge vc">VC</span>
-                      {owner.viceCaptain && <PlayerAvatar player={viceCaptainPlayer} name={owner.viceCaptain} size={26} />}
-                      <span className={`leader-name${owner.viceCaptain ? '' : ' empty'}`}>
-                        {owner.viceCaptain || 'To be announced'}
+                      {viceCaptain && <PlayerAvatar player={viceCaptainPlayer} name={viceCaptain} size={26} />}
+                      <span className={`leader-name${viceCaptain ? '' : ' empty'}`}>
+                        {viceCaptain || 'To be announced'}
                       </span>
                     </div>
                   </div>

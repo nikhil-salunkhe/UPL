@@ -14,6 +14,15 @@ const emptyOwner = { name: '', phone: '', team: '', captain: '', viceCaptain: ''
 const emptySponsor = { companyName: '', sponsoredPrice: '', phone: '', logo: '' };
 const emptyTournament = { auctionDate: '', matchStartDate: '', matchEndDate: '', lotA: 'Lot A', lotB: 'Lot B', lotADay: 1, lotBDay: 2, venue: 'जुगाइदेवी स्टेडियम उरूल' };
 const emptyMatch = { teamA: '', teamB: '', matchDate: '', matchTime: '10:00 AM', lot: 'Lot A', venue: 'जुगाइदेवी स्टेडियम उरूल' };
+// Captain / vice-captain are player NAMES — guard against corrupted records
+// where an image data URL ended up in these fields (renders as base64 text).
+const cleanLeaderName = (name) => {
+  if (typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  if (/^(data|blob|https?):/i.test(trimmed) || trimmed.length > 80) return '';
+  return trimmed;
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -254,8 +263,8 @@ const AdminDashboard = () => {
   // Get unique team names from registered owners (filter out empty/auction pending)
   const registeredTeams = [...new Set(owners.map(o => o.team).filter(t => t && t !== 'Auction Pending'))];
 
-  const selectedCaptain = players.find((player) => player.name === ownerForm.captain);
-  const selectedViceCaptain = players.find((player) => player.name === ownerForm.viceCaptain);
+  const selectedCaptain = players.find((player) => player.name === cleanLeaderName(ownerForm.captain));
+  const selectedViceCaptain = players.find((player) => player.name === cleanLeaderName(ownerForm.viceCaptain));
 
   return (
     <div className="admin-dashboard">
@@ -326,8 +335,8 @@ const AdminDashboard = () => {
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
                 ))}
-                {ownerForm.captain && !players.some((player) => player.name === ownerForm.captain) && (
-                  <option value={ownerForm.captain}>{ownerForm.captain}</option>
+                {cleanLeaderName(ownerForm.captain) && !players.some((player) => player.name === cleanLeaderName(ownerForm.captain)) && (
+                  <option value={cleanLeaderName(ownerForm.captain)}>{cleanLeaderName(ownerForm.captain)}</option>
                 )}
               </select>
               <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Vice Captain (select from added players)</label>
@@ -338,8 +347,8 @@ const AdminDashboard = () => {
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
                 ))}
-                {ownerForm.viceCaptain && !players.some((player) => player.name === ownerForm.viceCaptain) && (
-                  <option value={ownerForm.viceCaptain}>{ownerForm.viceCaptain}</option>
+                {cleanLeaderName(ownerForm.viceCaptain) && !players.some((player) => player.name === cleanLeaderName(ownerForm.viceCaptain)) && (
+                  <option value={cleanLeaderName(ownerForm.viceCaptain)}>{cleanLeaderName(ownerForm.viceCaptain)}</option>
                 )}
               </select>
               {players.length === 0 && (
@@ -370,19 +379,25 @@ const AdminDashboard = () => {
                   <div>
                     <strong>{owner.name}</strong>
                     <p>{owner.team || 'Auction Pending'}</p>
+                    {(() => {
+                      const c = cleanLeaderName(owner.captain);
+                      const vc = cleanLeaderName(owner.viceCaptain);
+                      return (
                     <p style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.85rem' }}>
                       <span className="player-cell">
-                        {owner.captain && <PlayerAvatar player={players.find((player) => player.name === owner.captain)} name={owner.captain} size={24} />}
-                        C: {owner.captain || 'TBD'}
+                        {c && <PlayerAvatar player={players.find((player) => player.name === c)} name={c} size={24} />}
+                        C: {c || 'TBD'}
                       </span>
                       <span className="player-cell">
-                        {owner.viceCaptain && <PlayerAvatar player={players.find((player) => player.name === owner.viceCaptain)} name={owner.viceCaptain} size={24} />}
-                        VC: {owner.viceCaptain || 'TBD'}
+                        {vc && <PlayerAvatar player={players.find((player) => player.name === vc)} name={vc} size={24} />}
+                        VC: {vc || 'TBD'}
                       </span>
                     </p>
+                      );
+                    })()}
                   </div>
                   <div className="admin-actions">
-                    <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
+                    <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, captain: cleanLeaderName(owner.captain), viceCaptain: cleanLeaderName(owner.viceCaptain), image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('owner', owner._id)}>Delete</button>
                   </div>
                 </div>
