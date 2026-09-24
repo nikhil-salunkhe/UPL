@@ -4,6 +4,8 @@ const ownerSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   phone: { type: String, required: true, trim: true },
   team: { type: String, default: '', trim: true },
+  captain: { type: String, default: '', trim: true },
+  viceCaptain: { type: String, default: '', trim: true },
   image: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });

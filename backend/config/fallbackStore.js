@@ -47,6 +47,8 @@ function initStore() {
         name: 'Rahul Mehta',
         phone: '9876543210',
         team: 'Gulmohar Lions',
+        captain: 'Aarav Singh',
+        viceCaptain: '',
         image: ''
       }
     ],

@@ -1,6 +1,15 @@
 const Owner = require('../models/Owner');
 const { isMongoConnected, getOwners: getStoreOwners, createOwner: createStoreOwner, updateOwner: updateStoreOwner, deleteOwner: deleteStoreOwner } = require('../config/fallbackStore');
 
+const trimField = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const validateLeadership = (captain, viceCaptain) => {
+  if (captain && viceCaptain && captain.toLowerCase() === viceCaptain.toLowerCase()) {
+    return 'Captain and Vice Captain must be different';
+  }
+  return null;
+};
+
 exports.getOwners = async (req, res) => {
   try {
     if (!isMongoConnected()) {
@@ -18,9 +27,16 @@ exports.createOwner = async (req, res) => {
     const payload = {
       name: req.body.name,
       phone: req.body.phone,
-      team: req.body.team || '',
+      team: trimField(req.body.team),
+      captain: trimField(req.body.captain),
+      viceCaptain: trimField(req.body.viceCaptain),
       image: req.file ? `/uploads/${req.file.filename}` : ''
     };
+
+    const leadershipError = validateLeadership(payload.captain, payload.viceCaptain);
+    if (leadershipError) {
+      return res.status(400).json({ message: leadershipError });
+    }
 
     if (!isMongoConnected()) {
       const owner = createStoreOwner(payload);
@@ -39,8 +55,15 @@ exports.updateOwner = async (req, res) => {
     const updateData = {
       name: req.body.name,
       phone: req.body.phone,
-      team: req.body.team || ''
+      team: trimField(req.body.team),
+      captain: trimField(req.body.captain),
+      viceCaptain: trimField(req.body.viceCaptain)
     };
+
+    const leadershipError = validateLeadership(updateData.captain, updateData.viceCaptain);
+    if (leadershipError) {
+      return res.status(400).json({ message: leadershipError });
+    }
 
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;

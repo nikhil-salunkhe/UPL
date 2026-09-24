@@ -53,6 +53,8 @@ const Owners = () => {
                 <th>Image</th>
                 <th>Name</th>
                 <th>Team</th>
+                <th>Captain</th>
+                <th>Vice Captain</th>
                 <th>Phone</th>
               </tr>
             </thead>
@@ -62,6 +64,8 @@ const Owners = () => {
                   <td className="img-cell"><img src={getImageSrc(owner)} alt={owner.name} /></td>
                   <td>{owner.name}</td>
                   <td>{owner.team || 'Auction Pending'}</td>
+                  <td>{owner.captain || 'TBD'}</td>
+                  <td>{owner.viceCaptain || 'TBD'}</td>
                   <td>{owner.phone}</td>
                 </tr>
               ))}

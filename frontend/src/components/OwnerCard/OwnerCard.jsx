@@ -15,6 +15,8 @@ const OwnerCard = ({ owner }) => {
       <div className="card-body">
         <h3>{owner.name}</h3>
         <p><strong>Team:</strong> {owner.team || 'Auction Pending'}</p>
+        <p><strong>Captain:</strong> {owner.captain || 'TBD'}</p>
+        <p><strong>Vice Captain:</strong> {owner.viceCaptain || 'TBD'}</p>
         <p><strong>Phone:</strong> {owner.phone}</p>
       </div>
     </article>

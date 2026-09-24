@@ -9,7 +9,7 @@ import { getMatches, createMatch, updateMatch, deleteMatch } from '../../service
 import './Admin.css';
 
 const emptyPlayer = { name: '', age: '', role: 'Batsman', team: '', image: '' };
-const emptyOwner = { name: '', phone: '', team: '', image: '' };
+const emptyOwner = { name: '', phone: '', team: '', captain: '', viceCaptain: '', image: '' };
 const emptySponsor = { companyName: '', sponsoredPrice: '', phone: '', logo: '' };
 const emptyTournament = { auctionDate: '', matchStartDate: '', matchEndDate: '', lotA: 'Lot A', lotB: 'Lot B', lotADay: 1, lotBDay: 2, venue: 'जुगाइदेवी स्टेडियम उरूल' };
 const emptyMatch = { teamA: '', teamB: '', matchDate: '', matchTime: '10:00 AM', lot: 'Lot A', venue: 'जुगाइदेवी स्टेडियम उरूल' };
@@ -177,6 +177,12 @@ const AdminDashboard = () => {
 
   const handleOwnerSubmit = async (e) => {
     e.preventDefault();
+    const captain = ownerForm.captain.trim();
+    const viceCaptain = ownerForm.viceCaptain.trim();
+    if (captain && viceCaptain && captain.toLowerCase() === viceCaptain.toLowerCase()) {
+      setMessage('Captain and Vice Captain must be different');
+      return;
+    }
     const payload = new FormData();
     Object.entries(ownerForm).forEach(([key, value]) => {
       if (key === 'image') {
@@ -308,7 +314,14 @@ const AdminDashboard = () => {
               <h3>{editingOwnerId ? 'Edit Owner' : 'Add Owner'}</h3>
               <input value={ownerForm.name} onChange={(e) => setOwnerForm({ ...ownerForm, name: e.target.value })} placeholder="Owner Name" required />
               <input value={ownerForm.phone} onChange={(e) => setOwnerForm({ ...ownerForm, phone: e.target.value })} placeholder="Phone" required />
-              <input value={ownerForm.team} onChange={(e) => setOwnerForm({ ...ownerForm, team: e.target.value })} placeholder="Team (leave blank until auction)" />
+              <input value={ownerForm.team} onChange={(e) => setOwnerForm({ ...ownerForm, team: e.target.value })} placeholder="Team Name" required />
+              <datalist id="owner-player-options">
+                {players.map((player) => (
+                  <option key={player._id} value={player.name} />
+                ))}
+              </datalist>
+              <input list="owner-player-options" value={ownerForm.captain} onChange={(e) => setOwnerForm({ ...ownerForm, captain: e.target.value })} placeholder="Captain (select or type name)" />
+              <input list="owner-player-options" value={ownerForm.viceCaptain} onChange={(e) => setOwnerForm({ ...ownerForm, viceCaptain: e.target.value })} placeholder="Vice Captain (select or type name)" />
               <input type="file" onChange={(e) => setOwnerForm({ ...ownerForm, image: e.target.files[0] })} />
               <button type="submit">Save Owner</button>
             </form>
@@ -318,9 +331,10 @@ const AdminDashboard = () => {
                   <div>
                     <strong>{owner.name}</strong>
                     <p>{owner.team || 'Auction Pending'}</p>
+                    <p>Captain: {owner.captain || 'TBD'} · Vice Captain: {owner.viceCaptain || 'TBD'}</p>
                   </div>
                   <div className="admin-actions">
-                    <button onClick={() => { setOwnerForm({ ...ownerForm, ...owner, image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
+                    <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('owner', owner._id)}>Delete</button>
                   </div>
                 </div>
