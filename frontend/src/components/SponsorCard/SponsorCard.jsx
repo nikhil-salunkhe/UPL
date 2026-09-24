@@ -6,6 +6,7 @@ const SponsorCard = ({ sponsor }) => {
     if (!image) {
       return 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=600&q=80';
     }
+    if (image.startsWith('data:')) return image;
     return image.startsWith('http') ? image : `${apiBaseUrl}${image.startsWith('/') ? image : `/${image}`}`;
   };
 

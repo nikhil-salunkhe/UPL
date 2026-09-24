@@ -9,7 +9,7 @@ const getImageSrc = (player) => {
   if (!player.image) {
     return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=200&q=80';
   }
-  if (player.image.startsWith('http')) {
+  if (player.image.startsWith('data:') || player.image.startsWith('http')) {
     return player.image;
   }
   return `${apiBaseUrl}${player.image.startsWith('/') ? player.image : `/${player.image}`}`;

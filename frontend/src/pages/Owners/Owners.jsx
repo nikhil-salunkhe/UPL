@@ -9,7 +9,7 @@ const getImageSrc = (owner) => {
   if (!owner.image) {
     return 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=200&q=80';
   }
-  if (owner.image.startsWith('http')) {
+  if (owner.image.startsWith('data:') || owner.image.startsWith('http')) {
     return owner.image;
   }
   return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;

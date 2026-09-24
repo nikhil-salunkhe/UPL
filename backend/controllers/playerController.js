@@ -1,5 +1,6 @@
 const Player = require('../models/Player');
 const { isMongoConnected, getPlayers: getStorePlayers, createPlayer: createStorePlayer, updatePlayer: updateStorePlayer, deletePlayer: deleteStorePlayer } = require('../config/fallbackStore');
+const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
 
 const parseAge = (value) => {
   if (value === undefined || value === null || value === '') return null;
@@ -25,7 +26,7 @@ exports.createPlayer = async (req, res) => {
       name: req.body.name,
       role: req.body.role,
       team: req.body.team || '',
-      image: req.file ? `/uploads/${req.file.filename}` : ''
+      image: fileToDataUrl(req.file)
     };
 
     const age = parseAge(req.body.age);
@@ -58,8 +59,11 @@ exports.updatePlayer = async (req, res) => {
       updateData.age = age;
     }
 
-    if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
+    if (req.file && req.file.buffer) {
+      updateData.image = fileToDataUrl(req.file);
+    } else {
+      const bodyImage = resolveImageInput(req.body.image, null);
+      if (bodyImage) updateData.image = bodyImage;
     }
 
     if (!isMongoConnected()) {

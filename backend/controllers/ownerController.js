@@ -1,5 +1,6 @@
 const Owner = require('../models/Owner');
 const { isMongoConnected, getOwners: getStoreOwners, createOwner: createStoreOwner, updateOwner: updateStoreOwner, deleteOwner: deleteStoreOwner } = require('../config/fallbackStore');
+const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
 
 const trimField = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -30,7 +31,7 @@ exports.createOwner = async (req, res) => {
       team: trimField(req.body.team),
       captain: trimField(req.body.captain),
       viceCaptain: trimField(req.body.viceCaptain),
-      image: req.file ? `/uploads/${req.file.filename}` : ''
+      image: fileToDataUrl(req.file)
     };
 
     const leadershipError = validateLeadership(payload.captain, payload.viceCaptain);
@@ -65,8 +66,11 @@ exports.updateOwner = async (req, res) => {
       return res.status(400).json({ message: leadershipError });
     }
 
-    if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
+    if (req.file && req.file.buffer) {
+      updateData.image = fileToDataUrl(req.file);
+    } else {
+      const bodyImage = resolveImageInput(req.body.image, null);
+      if (bodyImage) updateData.image = bodyImage;
     }
 
     if (!isMongoConnected()) {

@@ -7,7 +7,7 @@ const getImageSrc = (sponsor) => {
   if (!sponsor.logo) {
     return 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=200&q=80';
   }
-  if (sponsor.logo.startsWith('http')) {
+  if (sponsor.logo.startsWith('data:') || sponsor.logo.startsWith('http')) {
     return sponsor.logo;
   }
   return `${apiBaseUrl}${sponsor.logo.startsWith('/') ? sponsor.logo : `/${sponsor.logo}`}`;

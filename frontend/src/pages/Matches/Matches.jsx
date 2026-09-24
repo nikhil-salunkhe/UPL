@@ -24,7 +24,7 @@ const Matches = () => {
           if (owner.team && owner.team !== 'Auction Pending') {
             let imageUrl = '';
             if (owner.image) {
-              if (owner.image.startsWith('http')) {
+              if (owner.image.startsWith('data:') || owner.image.startsWith('http')) {
                 imageUrl = owner.image;
               } else {
                 imageUrl = `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;

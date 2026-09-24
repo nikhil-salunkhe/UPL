@@ -9,7 +9,7 @@ import './Home.css';
 
 const getOwnerImageSrc = (owner) => {
   if (!owner.image) return '';
-  if (owner.image.startsWith('http')) return owner.image;
+  if (owner.image.startsWith('data:') || owner.image.startsWith('http')) return owner.image;
   return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
 };
 

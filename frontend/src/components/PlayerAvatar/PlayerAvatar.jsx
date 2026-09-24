@@ -16,7 +16,8 @@ const PlayerAvatar = ({ player, name, size = 32 }) => {
   const style = { width: `${size}px`, height: `${size}px` };
 
   if (image) {
-    const src = image.startsWith('http') ? image : `${apiBaseUrl}${image.startsWith('/') ? image : `/${image}`}`;
+    if (image.startsWith('data:') || image.startsWith('http')) return image;
+    const src = `${apiBaseUrl}${image.startsWith('/') ? image : `/${image}`}`;
     return <img className="player-avatar" src={src} alt={displayName} style={style} />;
   }
 

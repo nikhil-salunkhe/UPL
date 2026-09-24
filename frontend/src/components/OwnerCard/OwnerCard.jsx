@@ -7,6 +7,7 @@ const OwnerCard = ({ owner, players = [] }) => {
     if (!image) {
       return 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80';
     }
+    if (image.startsWith('data:')) return image;
     return image.startsWith('http') ? image : `${apiBaseUrl}${image.startsWith('/') ? image : `/${image}`}`;
   };
 

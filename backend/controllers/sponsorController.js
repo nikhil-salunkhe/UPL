@@ -1,5 +1,6 @@
 const Sponsor = require('../models/Sponsor');
 const { isMongoConnected, getSponsors: getStoreSponsors, createSponsor: createStoreSponsor, updateSponsor: updateStoreSponsor, deleteSponsor: deleteStoreSponsor } = require('../config/fallbackStore');
+const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
 
 exports.getSponsors = async (req, res) => {
   try {
@@ -19,7 +20,7 @@ exports.createSponsor = async (req, res) => {
       companyName: req.body.companyName,
       sponsoredPrice: req.body.sponsoredPrice || '',
       phone: req.body.phone,
-      logo: req.file ? `/uploads/${req.file.filename}` : ''
+      logo: fileToDataUrl(req.file)
     };
 
     if (!isMongoConnected()) {
@@ -42,8 +43,11 @@ exports.updateSponsor = async (req, res) => {
       phone: req.body.phone
     };
 
-    if (req.file) {
-      updateData.logo = `/uploads/${req.file.filename}`;
+    if (req.file && req.file.buffer) {
+      updateData.logo = fileToDataUrl(req.file);
+    } else {
+      const bodyLogo = resolveImageInput(req.body.logo, null);
+      if (bodyLogo) updateData.logo = bodyLogo;
     }
 
     if (!isMongoConnected()) {
