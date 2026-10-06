@@ -10,6 +10,21 @@ export const createPlayer = async (payload) => {
   return response.data;
 };
 
+export const registerPlayer = async (payload) => {
+  const response = await api.post('/players/register', payload);
+  return response.data;
+};
+
+export const getAllPlayers = async () => {
+  const response = await api.get('/players/all');
+  return response.data;
+};
+
+export const approvePlayer = async (id) => {
+  const response = await api.patch(`/players/${id}/approve`);
+  return response.data;
+};
+
 export const updatePlayer = async (id, payload) => {
   const response = await api.put(`/players/${id}`, payload);
   return response.data;

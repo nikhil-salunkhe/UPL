@@ -228,3 +228,31 @@
   color: #ffb8b8;
 }
 
+.pending-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: rgba(245,166,35,0.08);
+  border: 1px solid rgba(245,166,35,0.35);
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+}
+
+.pending-box h4,
+.approved-heading {
+  margin: 0;
+  color: #ffd96f;
+}
+
+.pending-item {
+  border: 1px solid rgba(245,166,35,0.4);
+}
+
+.approve-btn {
+  background: linear-gradient(135deg, #2ecf73, #1c8c56) !important;
+}
+
+.reject-btn {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+}
+

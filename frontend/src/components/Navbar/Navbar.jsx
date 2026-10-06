@@ -10,7 +10,8 @@ const Navbar = () => {
     { to: '/players', label: 'Players' },
     { to: '/owners', label: 'Owners' },
     { to: '/sponsors', label: 'Sponsors' },
-    { to: '/matches', label: 'Matches' }
+    { to: '/matches', label: 'Matches' },
+    { to: '/register', label: '📝 Register', highlight: true }
   ];
 
   return (
@@ -36,7 +37,9 @@ const Navbar = () => {
           <NavLink
             key={link.to}
             to={link.to}
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            className={({ isActive }) =>
+              `nav-link${isActive ? ' active' : ''}${link.highlight ? ' highlight' : ''}`
+            }
             onClick={() => setMenuOpen(false)}
           >
             {link.label}

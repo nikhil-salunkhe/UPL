@@ -8,7 +8,26 @@ const parseAge = (value) => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
+const isApproved = (player) => !player.status || player.status === 'approved';
+
 exports.getPlayers = async (req, res) => {
+  try {
+    if (!isMongoConnected()) {
+      // Public list: only approved players
+      return res.json(getStorePlayers().filter(isApproved));
+    }
+    const players = await Player.find({ status: { $in: ['approved', null] } }).sort({ createdAt: -1 });
+    // Backfill: legacy docs without status still show up
+    const legacy = await Player.find({ status: { $exists: false } }).sort({ createdAt: -1 });
+    const merged = [...players, ...legacy.filter((p) => !players.some((q) => q._id.equals(p._id)))];
+    res.json(merged);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch players', error: error.message });
+  }
+};
+
+// Admin-only: see EVERYTHING including pending registrations
+exports.getAllPlayers = async (req, res) => {
   try {
     if (!isMongoConnected()) {
       return res.json(getStorePlayers());
@@ -26,7 +45,9 @@ exports.createPlayer = async (req, res) => {
       name: req.body.name,
       role: req.body.role,
       team: req.body.team || '',
-      image: fileToDataUrl(req.file)
+      phone: (req.body.phone || '').trim(),
+      image: fileToDataUrl(req.file),
+      status: 'approved'
     };
 
     const age = parseAge(req.body.age);
@@ -51,7 +72,8 @@ exports.updatePlayer = async (req, res) => {
     const updateData = {
       name: req.body.name,
       role: req.body.role,
-      team: req.body.team || ''
+      team: req.body.team || '',
+      phone: (req.body.phone || '').trim()
     };
 
     const age = parseAge(req.body.age);
@@ -103,5 +125,62 @@ exports.deletePlayer = async (req, res) => {
     res.json({ message: 'Player deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete player', error: error.message });
+  }
+};
+
+// PUBLIC: self-registration — no login needed, always saved as pending
+// Separate form: only name, role, team, photo (no age / phone required)
+exports.registerPlayer = async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    const role = (req.body.role || '').trim();
+
+    if (!name || !role) {
+      return res.status(400).json({ message: 'Player name and role are required' });
+    }
+
+    const payload = {
+      name,
+      role,
+      team: (req.body.team || '').trim(),
+      image: fileToDataUrl(req.file),
+      status: 'pending'
+    };
+
+    if (!isMongoConnected()) {
+      const player = createStorePlayer(payload);
+      return res.status(201).json(player);
+    }
+
+    const player = await Player.create(payload);
+    res.status(201).json(player);
+  } catch (error) {
+    res.status(500).json({ message: 'Registration failed', error: error.message });
+  }
+};
+
+// ADMIN: approve a pending registration
+exports.approvePlayer = async (req, res) => {
+  try {
+    if (!isMongoConnected()) {
+      const player = updateStorePlayer(req.params.id, { status: 'approved' });
+      if (!player) {
+        return res.status(404).json({ message: 'Player not found' });
+      }
+      return res.json(player);
+    }
+
+    const player = await Player.findByIdAndUpdate(
+      req.params.id,
+      { status: 'approved' },
+      { new: true }
+    );
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    res.json(player);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to approve player', error: error.message });
   }
 };

@@ -1,0 +1,136 @@
+.register-shell {
+  min-height: 75vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.register-card {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+
+.register-card .eyebrow {
+  margin: 0;
+  color: #87d99f;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.register-card h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.8rem;
+}
+
+.register-sub {
+  margin: 0;
+  color: #c9d4f2;
+  font-size: 0.95rem;
+}
+
+.register-alert {
+  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  font-size: 0.92rem;
+}
+
+.register-alert.success {
+  background: rgba(46,207,115,0.18);
+  border: 1px solid rgba(46,207,115,0.4);
+  color: #d9ffe7;
+}
+
+.register-alert.error {
+  background: rgba(231,76,60,0.15);
+  border: 1px solid rgba(231,76,60,0.4);
+  color: #ffc9c2;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.register-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: #e8edff;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.register-form .optional {
+  color: #9aa7c9;
+  font-weight: 400;
+}
+
+.register-form input,
+.register-form select {
+  padding: 0.8rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.register-form select option {
+  color: #111;
+}
+
+.register-form input::placeholder {
+  color: #93a0c0;
+}
+
+.photo-preview {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 1rem;
+  border: 2px solid rgba(46,207,115,0.5);
+}
+
+.submit-btn {
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  background: linear-gradient(135deg, #2ecf73, #1c8c56);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.back-link {
+  text-align: center;
+  color: #87d99f;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 520px) {
+  .register-card {
+    padding: 1.3rem;
+  }
+}

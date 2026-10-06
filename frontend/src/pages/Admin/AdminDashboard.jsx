@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { createPlayer, deletePlayer, getPlayers, updatePlayer } from '../../services/playerService';
+import { approvePlayer, createPlayer, deletePlayer, getAllPlayers, updatePlayer } from '../../services/playerService';
 import { createOwner, deleteOwner, getOwners, updateOwner } from '../../services/ownerService';
 import { createSponsor, deleteSponsor, getSponsors, updateSponsor } from '../../services/sponsorService';
 import { getTournament, saveTournament } from '../../services/tournamentService';
@@ -45,7 +45,7 @@ const AdminDashboard = () => {
 
   const loadData = async () => {
     try {
-      const [playerData, ownerData, sponsorData] = await Promise.all([getPlayers(), getOwners(), getSponsors()]);
+      const [playerData, ownerData, sponsorData] = await Promise.all([getAllPlayers(), getOwners(), getSponsors()]);
       setPlayers(playerData);
       setOwners(ownerData);
       setSponsors(sponsorData);
@@ -253,6 +253,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleApprovePlayer = async (id) => {
+    try {
+      await approvePlayer(id);
+      setMessage('Player approved ✅');
+      loadData();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Approval failed');
+    }
+  };
+
+  const handleRejectPlayer = async (id, name) => {
+    if (!window.confirm(`Reject & delete registration of "${name}"?`)) return;
+    try {
+      await deletePlayer(id);
+      setMessage('Registration rejected & removed');
+      loadData();
+    } catch (error) {
+      setMessage('Reject failed');
+    }
+  };
+
+  const pendingPlayers = players.filter((p) => p.status === 'pending');
+  const approvedPlayers = players.filter((p) => p.status !== 'pending');
+
   const formatMatchDate = (date) => {
     if (!date) return 'TBD';
     const d = new Date(date);
@@ -304,7 +328,30 @@ const AdminDashboard = () => {
               <button type="submit">Save Player</button>
             </form>
             <div className="admin-list">
-              {players.map((player) => (
+              {pendingPlayers.length > 0 && (
+                <div className="pending-box">
+                  <h4>⏳ Pending Approvals ({pendingPlayers.length})</h4>
+                  {pendingPlayers.map((player) => (
+                    <div key={player._id} className="admin-item pending-item">
+                      <div>
+                        <strong>{player.name}</strong>
+                        <p>{player.role}{player.team ? ` • ${player.team}` : ''}</p>
+                      </div>
+                      <div className="admin-actions">
+                        <button className="approve-btn" onClick={() => handleApprovePlayer(player._id)}>Approve ✅</button>
+                        <button className="reject-btn" onClick={() => handleRejectPlayer(player._id, player.name)}>Reject ❌</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {pendingPlayers.length === 0 && (
+                <div className="status-card">No pending registrations 🎉</div>
+              )}
+
+              <h4 className="approved-heading">Approved Players ({approvedPlayers.length})</h4>
+              {approvedPlayers.map((player) => (
                 <div key={player._id} className="admin-item">
                   <div>
                     <strong>{player.name}</strong>
