@@ -10,8 +10,7 @@ const Navbar = () => {
     { to: '/players', label: 'Players' },
     { to: '/owners', label: 'Owners' },
     { to: '/sponsors', label: 'Sponsors' },
-    { to: '/matches', label: 'Matches' },
-    { to: '/register', label: '📝 Register', highlight: true }
+    { to: '/matches', label: 'Matches' }
   ];
 
   return (

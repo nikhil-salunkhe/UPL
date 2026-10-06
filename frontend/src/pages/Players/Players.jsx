@@ -110,7 +110,6 @@ const Players = () => {
                 <th>Image</th>
                 <th>Name</th>
                 <th>Role</th>
-                <th>Age</th>
                 <th>Team</th>
               </tr>
             </thead>
@@ -129,7 +128,6 @@ const Players = () => {
                       </span>
                     </td>
                     <td>{player.role}</td>
-                    <td>{player.age ?? '—'}</td>
                     <td>{displayTeam || <span className="team-pending">—</span>}</td>
                   </tr>
                 );
