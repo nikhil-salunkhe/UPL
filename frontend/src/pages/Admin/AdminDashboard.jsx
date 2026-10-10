@@ -158,6 +158,10 @@ const AdminDashboard = () => {
 
   const retryPlayers = () => fetchPlayersPage(playerPage, playerStatus);
 
+  // Row numbers continue across pages of the current filter (page 2 starts at
+  // #26). With the legacy single-array backend everything is on page 1.
+  const playerNumberOffset = playerPagination ? (playerPage - 1) * PLAYERS_PAGE_SIZE : 0;
+
   const loadMatches = async () => {
     try {
       const data = await getMatches();
@@ -495,10 +499,10 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {!playersLoading && !playersError && players.map((player) => (
+              {!playersLoading && !playersError && players.map((player, index) => (
                 <div key={player._id} className={`admin-item${player.status === 'pending' ? ' pending-item' : ''}`}>
                   <div>
-                    <strong>{player.name}</strong>
+                    <strong><span style={{ color: '#2ecf73' }}>#{playerNumberOffset + index + 1}</span> {player.name}</strong>
                     <p>{player.role}{player.team ? ` • ${player.team}` : ''}</p>
                   </div>
                   <div className="admin-actions">

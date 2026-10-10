@@ -134,6 +134,7 @@ const Players = () => {
           <table className="players-table">
             <thead>
               <tr>
+                <th className="row-num">#</th>
                 <th>Image</th>
                 <th>Name</th>
                 <th>Role</th>
@@ -141,12 +142,13 @@ const Players = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredPlayers.map((player) => {
+              {filteredPlayers.map((player, index) => {
                 const badge = getLeaderBadge(player, owners);
                 const displayTeam = getPlayerTeam(player, owners);
 
                 return (
                   <tr key={player._id}>
+                    <td className="row-num">{index + 1}</td>
                     <td className="img-cell">
                       <button
                         type="button"
