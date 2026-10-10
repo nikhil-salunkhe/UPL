@@ -142,6 +142,109 @@
   color: #9fb3c8;
 }
 
+.img-preview-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  display: block;
+  line-height: 0;
+  transition: transform 0.18s ease;
+}
+
+.img-preview-btn:hover {
+  transform: scale(1.06);
+}
+
+.img-preview-btn:focus-visible {
+  outline: 2px solid #2ecf73;
+  outline-offset: 2px;
+}
+
+/* Instagram-style photo preview */
+.photo-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(4, 10, 18, 0.85);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: photoPreviewFade 0.2s ease;
+}
+
+.photo-preview-card {
+  position: relative;
+  width: min(92vw, 420px);
+  background: #0f1f33;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  animation: photoPreviewPop 0.22s ease;
+}
+
+.photo-preview-card img {
+  width: 100%;
+  height: min(62vw, 340px);
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  background: #071120;
+}
+
+.photo-preview-info {
+  padding: 0.9rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.photo-preview-info strong {
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.photo-preview-info span {
+  color: #9fb3c8;
+  font-size: 0.88rem;
+}
+
+.photo-preview-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview-close:hover {
+  background: rgba(46,207,115,0.85);
+  border-color: transparent;
+}
+
+@keyframes photoPreviewFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes photoPreviewPop {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 @media (max-width: 700px) {
   .page-shell {
     padding: 1.2rem 0.7rem 2rem;
@@ -231,6 +334,11 @@
     object-position: top center;
     border: 2px solid rgba(46,207,115,0.5);
     display: block;
+  }
+
+  .players-table td.img-cell .img-preview-btn {
+    border-radius: 50%;
+    line-height: 0;
   }
 
   .players-table td:nth-child(2) {

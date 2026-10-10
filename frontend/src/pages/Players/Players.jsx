@@ -51,6 +51,7 @@ const Players = () => {
   const [search, setSearch] = useState('');
   const [team, setTeam] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [previewPlayer, setPreviewPlayer] = useState(null);
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -67,6 +68,19 @@ const Players = () => {
 
     loadPlayers();
   }, []);
+
+  useEffect(() => {
+    if (!previewPlayer) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setPreviewPlayer(null);
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [previewPlayer]);
 
   const teams = useMemo(
     () => ['All', ...new Set(players.map((player) => getPlayerTeam(player, owners)).filter(Boolean))],
@@ -120,7 +134,16 @@ const Players = () => {
 
                 return (
                   <tr key={player._id}>
-                    <td className="img-cell"><img src={getImageSrc(player)} alt={player.name} /></td>
+                    <td className="img-cell">
+                      <button
+                        type="button"
+                        className="img-preview-btn"
+                        onClick={() => setPreviewPlayer(player)}
+                        aria-label={`View ${player.name} photo`}
+                      >
+                        <img src={getImageSrc(player)} alt={player.name} />
+                      </button>
+                    </td>
                     <td>
                       <span className="player-name">
                         <span className="player-name-text">{player.name}</span>
@@ -134,6 +157,38 @@ const Players = () => {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {previewPlayer && (
+        <div
+          className="photo-preview-overlay"
+          onClick={() => setPreviewPlayer(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${previewPlayer.name} photo preview`}
+        >
+          <div
+            className="photo-preview-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="photo-preview-close"
+              onClick={() => setPreviewPlayer(null)}
+              aria-label="Close photo preview"
+            >
+              ✕
+            </button>
+            <img
+              src={getImageSrc(previewPlayer)}
+              alt={previewPlayer.name}
+            />
+            <div className="photo-preview-info">
+              <strong>{previewPlayer.name}</strong>
+              <span>{previewPlayer.role}{getPlayerTeam(previewPlayer, owners) ? ` • ${getPlayerTeam(previewPlayer, owners)}` : ''}</span>
+            </div>
+          </div>
         </div>
       )}
     </div>
