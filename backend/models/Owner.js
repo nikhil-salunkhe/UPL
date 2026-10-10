@@ -7,6 +7,7 @@ const ownerSchema = new mongoose.Schema({
   captain: { type: String, default: '', trim: true },
   viceCaptain: { type: String, default: '', trim: true },
   image: { type: String, default: '' },
+  displayOrder: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 

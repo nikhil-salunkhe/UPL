@@ -19,3 +19,8 @@ export const deleteOwner = async (id) => {
   const response = await api.delete(`/owners/${id}`);
   return response.data;
 };
+
+export const reorderOwners = async (order) => {
+  const response = await api.put('/owners/reorder', { order });
+  return response.data;
+};

@@ -126,6 +126,30 @@ function deleteOwner(id) {
   return true;
 }
 
+function reorderOwners(orderIds) {
+  const state = getState();
+  const byId = new Map(state.owners.map((o) => [String(o._id), o]));
+  const seen = new Set();
+  const reordered = [];
+  (orderIds || []).forEach((id, index) => {
+    const owner = byId.get(String(id));
+    if (owner && !seen.has(String(id))) {
+      seen.add(String(id));
+      owner.displayOrder = index + 1;
+      reordered.push(owner);
+    }
+  });
+  // Append any owners missing from the order list at the end
+  state.owners.forEach((owner) => {
+    if (!seen.has(String(owner._id))) {
+      owner.displayOrder = reordered.length + 1;
+      reordered.push(owner);
+    }
+  });
+  state.owners = reordered;
+  return state.owners;
+}
+
 function getSponsors() {
   return getState().sponsors;
 }
@@ -221,6 +245,7 @@ module.exports = {
   createOwner,
   updateOwner,
   deleteOwner,
+  reorderOwners,
   getSponsors,
   createSponsor,
   updateSponsor,

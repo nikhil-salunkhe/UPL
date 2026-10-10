@@ -4,6 +4,12 @@ const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
 
 const trimField = (value) => (typeof value === 'string' ? value.trim() : '');
 
+const parseDisplayOrder = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : undefined;
+};
+
 // Captain / vice-captain are player NAMES — never allow an image data URL or
 // other junk to be stored there (this caused "data:image/..." text on Home).
 const sanitizeLeaderName = (value) => {
@@ -29,12 +35,16 @@ exports.getOwners = async (req, res) => {
       const obj = o && typeof o.toObject === 'function' ? o.toObject() : { ...o };
       obj.captain = sanitizeLeaderName(obj.captain);
       obj.viceCaptain = sanitizeLeaderName(obj.viceCaptain);
+      if (obj.displayOrder === undefined || obj.displayOrder === null) obj.displayOrder = 0;
       return obj;
     });
+    const sortByOrder = (list) => [...list].sort(
+      (a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0)
+    );
     if (!isMongoConnected()) {
-      return res.json(clean(getStoreOwners()));
+      return res.json(sortByOrder(clean(getStoreOwners())));
     }
-    const owners = await Owner.find().sort({ createdAt: -1 });
+    const owners = await Owner.find().sort({ displayOrder: 1, createdAt: 1 });
     res.json(clean(owners));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch owners', error: error.message });
@@ -51,6 +61,9 @@ exports.createOwner = async (req, res) => {
       viceCaptain: sanitizeLeaderName(req.body.viceCaptain),
       image: fileToDataUrl(req.file)
     };
+
+    const order = parseDisplayOrder(req.body.displayOrder);
+    if (order !== undefined) payload.displayOrder = order;
 
     const leadershipError = validateLeadership(payload.captain, payload.viceCaptain);
     if (leadershipError) {
@@ -78,6 +91,9 @@ exports.updateOwner = async (req, res) => {
       captain: req.body.captain !== undefined ? sanitizeLeaderName(req.body.captain) : undefined,
       viceCaptain: req.body.viceCaptain !== undefined ? sanitizeLeaderName(req.body.viceCaptain) : undefined
     };
+
+    const order = parseDisplayOrder(req.body.displayOrder);
+    if (order !== undefined) updateData.displayOrder = order;
 
     // Drop undefined keys so partial updates don't overwrite with undefined
     Object.keys(updateData).forEach((key) => {
@@ -153,5 +169,28 @@ exports.deleteOwner = async (req, res) => {
     res.json({ message: 'Owner deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete owner', error: error.message });
+  }
+};
+
+// Save full display order in one call: { order: [id1, id2, ...] }
+exports.reorderOwners = async (req, res) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) {
+      return res.status(400).json({ message: 'order must be an array of owner ids' });
+    }
+    if (!isMongoConnected()) {
+      const { reorderOwners: reorderStore } = require('../config/fallbackStore');
+      const owners = reorderStore(order);
+      return res.json(owners);
+    }
+    const updates = order.map((id, index) =>
+      Owner.findByIdAndUpdate(id, { displayOrder: index + 1 }, { new: true })
+    );
+    await Promise.all(updates);
+    const owners = await Owner.find().sort({ displayOrder: 1, createdAt: 1 });
+    res.json(owners);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to reorder owners', error: error.message });
   }
 };

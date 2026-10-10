@@ -89,7 +89,9 @@ const Owners = () => {
               </tr>
             </thead>
             <tbody>
-              {owners.map((owner) => (
+              {[...owners]
+                .sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
+                .map((owner) => (
                 <tr key={owner._id}>
                   <td className="img-cell"><img src={getImageSrc(owner)} alt={owner.name} /></td>
                   <td>{owner.name}</td>

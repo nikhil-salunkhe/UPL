@@ -172,8 +172,10 @@ const Home = () => {
           <div className="status-card">Teams will be announced after the auction.</div>
         ) : (
           <div className="teams-grid">
-            {owners.map((owner) => {
-              const captain = cleanLeaderName(owner.captain);
+            {[...owners]
+              .sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
+              .map((owner) => {
+                const captain = cleanLeaderName(owner.captain);
               const viceCaptain = cleanLeaderName(owner.viceCaptain);
               const captainPlayer = captain ? players.find((player) => player.name === captain) : undefined;
               const viceCaptainPlayer = viceCaptain ? players.find((player) => player.name === viceCaptain) : undefined;

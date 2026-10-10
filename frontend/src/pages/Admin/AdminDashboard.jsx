@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { approvePlayer, createPlayer, deletePlayer, getAllPlayers, updatePlayer } from '../../services/playerService';
-import { createOwner, deleteOwner, getOwners, updateOwner } from '../../services/ownerService';
+import { createOwner, deleteOwner, getOwners, reorderOwners, updateOwner } from '../../services/ownerService';
 import { createSponsor, deleteSponsor, getSponsors, updateSponsor } from '../../services/sponsorService';
 import { getTournament, saveTournament } from '../../services/tournamentService';
 import { getMatches, createMatch, updateMatch, deleteMatch } from '../../services/matchService';
@@ -253,6 +253,23 @@ const AdminDashboard = () => {
     }
   };
 
+  const moveOwner = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= owners.length) return;
+    const reordered = [...owners];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, moved);
+    setOwners(reordered);
+    try {
+      const updated = await reorderOwners(reordered.map((o) => o._id));
+      if (Array.isArray(updated) && updated.length) setOwners(updated);
+      setMessage(`"${moved.team || moved.name}" moved to position ${newIndex + 1} ✅`);
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Reorder failed — please retry');
+      loadData();
+    }
+  };
+
   const handleApprovePlayer = async (id) => {
     try {
       await approvePlayer(id);
@@ -421,10 +438,11 @@ const AdminDashboard = () => {
               <button type="submit">Save Owner</button>
             </form>
             <div className="admin-list">
-              {owners.map((owner) => (
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#b8f3cf' }}>🔢 Home screen shows teams in this order — use ↑ ↓ to set 1st, 2nd, 3rd…</p>
+              {owners.map((owner, index) => (
                 <div key={owner._id} className="admin-item">
                   <div>
-                    <strong>{owner.name}</strong>
+                    <strong><span style={{ color: '#2ecf73' }}>#{index + 1}</span> {owner.name}</strong>
                     <p>{owner.team || 'Auction Pending'}</p>
                     {(() => {
                       const c = cleanLeaderName(owner.captain);
@@ -444,6 +462,18 @@ const AdminDashboard = () => {
                     })()}
                   </div>
                   <div className="admin-actions">
+                    <button
+                      onClick={() => moveOwner(index, -1)}
+                      disabled={index === 0}
+                      title="Move up (show earlier on Home)"
+                      style={{ opacity: index === 0 ? 0.4 : 1 }}
+                    >↑</button>
+                    <button
+                      onClick={() => moveOwner(index, 1)}
+                      disabled={index === owners.length - 1}
+                      title="Move down (show later on Home)"
+                      style={{ opacity: index === owners.length - 1 ? 0.4 : 1 }}
+                    >↓</button>
                     <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, captain: cleanLeaderName(owner.captain), viceCaptain: cleanLeaderName(owner.viceCaptain), image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('owner', owner._id)}>Delete</button>
                   </div>
