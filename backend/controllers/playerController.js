@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Player = require('../models/Player');
 const { isMongoConnected, getPlayers: getStorePlayers, createPlayer: createStorePlayer, updatePlayer: updateStorePlayer, deletePlayer: deleteStorePlayer } = require('../config/fallbackStore');
 const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
+const { createdAtWithinWindow, isRecentDuplicatePlayer } = require('../utils/registrationGuard');
 const { parsePagination, statusFilter, matchesStatus, countByStatus } = require('../utils/queryHelper');
 
 const parseAge = (value) => {

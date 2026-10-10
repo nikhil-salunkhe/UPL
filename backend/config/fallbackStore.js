@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { normalizeForCompare, imageFingerprint } = require('./registrationGuard');
+const { normalizeForCompare, imageFingerprint } = require('../utils/registrationGuard');
 
 const createSampleId = (prefix) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
