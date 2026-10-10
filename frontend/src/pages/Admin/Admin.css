@@ -289,6 +289,28 @@
   color: #ffd96f;
 }
 
+/* Player search box: filters the admin player list (photos served on demand). */
+.list-search {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.search-input {
+  padding: 0.7rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  width: min(100%, 320px);
+}
+
+.search-input:focus {
+  outline: 2px solid #2ecf73;
+  border-color: transparent;
+}
+
 .pagination-controls {
   display: flex;
   align-items: center;

@@ -68,6 +68,9 @@ const AdminDashboard = () => {
   const [roster, setRoster] = useState([]); // full lightweight player list for captain/VC pickers
   const didInitRef = useRef(false);
 
+  // Player search box state (client-side filter over the current page).
+  const [playerSearch, setPlayerSearch] = useState('');
+
   const PLAYERS_PAGE_SIZE = 25;
 
   // Admin player list: paginated server-side, photos excluded from the payload
@@ -161,6 +164,17 @@ const AdminDashboard = () => {
   // Row numbers continue across pages of the current filter (page 2 starts at
   // #26). With the legacy single-array backend everything is on page 1.
   const playerNumberOffset = playerPagination ? (playerPage - 1) * PLAYERS_PAGE_SIZE : 0;
+
+  // Client-side search over the players on the current page (photos are served
+  // on demand, so this stays cheap). Narrowing is case-insensitive across
+  // name / role / team; the # numbering still follows the server page.
+  const filteredPlayers = players.filter((player) => {
+    const q = playerSearch.trim().toLowerCase();
+    if (!q) return true;
+    return [player.name, player.role, player.team].some((field) =>
+      String(field).toLowerCase().includes(q)
+    );
+  });
 
   const loadMatches = async () => {
     try {
@@ -468,6 +482,15 @@ const AdminDashboard = () => {
               <button type="submit">Save Player</button>
             </form>
             <div className="admin-list">
+              <div className="list-search">
+                <input
+                  className="search-input"
+                  type="text"
+                  placeholder="Search playersâ€¦"
+                  value={playerSearch}
+                  onChange={(e) => setPlayerSearch(e.target.value)}
+                />
+              </div>
               <div className="list-filters">
                 <button type="button" className={`filter-chip${playerStatus === 'all' ? ' active' : ''}`} onClick={() => changePlayerStatus('all')}>
                   All{playerCounts ? ` (${playerCounts.all})` : ''}
@@ -499,8 +522,9 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {!playersLoading && !playersError && players.map((player, index) => (
+              {!playersLoading && !playersError && filteredPlayers.map((player, index) => (
                 <div key={player._id} className={`admin-item${player.status === 'pending' ? ' pending-item' : ''}`}>
+                  <PlayerAvatar player={player} name={player.name} size={34} />
                   <div>
                     <strong><span style={{ color: '#2ecf73' }}>#{playerNumberOffset + index + 1}</span> {player.name}</strong>
                     <p>{player.role}{player.team ? ` • ${player.team}` : ''}</p>
