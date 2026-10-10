@@ -162,13 +162,13 @@
   outline-offset: 2px;
 }
 
-/* Instagram-style photo preview */
+/* Instagram-style CIRCLE photo preview - photo only, no name */
 .photo-preview-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(4, 10, 18, 0.85);
-  backdrop-filter: blur(6px);
+  background: rgba(4, 10, 18, 0.88);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -176,58 +176,41 @@
   animation: photoPreviewFade 0.2s ease;
 }
 
-.photo-preview-card {
+.photo-preview-circle-wrap {
   position: relative;
-  width: min(92vw, 420px);
-  background: #0f1f33;
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 1.25rem;
-  overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  width: min(78vw, 320px);
+  height: min(78vw, 320px);
   animation: photoPreviewPop 0.22s ease;
 }
 
-.photo-preview-card img {
+.photo-preview-circle {
   width: 100%;
-  height: min(62vw, 340px);
+  height: 100%;
+  border-radius: 50%;
   object-fit: cover;
-  object-position: top center;
+  object-position: center 20%;
   display: block;
   background: #071120;
-}
-
-.photo-preview-info {
-  padding: 0.9rem 1.1rem 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.photo-preview-info strong {
-  color: #fff;
-  font-size: 1.1rem;
-}
-
-.photo-preview-info span {
-  color: #9fb3c8;
-  font-size: 0.88rem;
+  border: 4px solid rgba(46,207,115,0.9);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.12), 0 30px 80px rgba(0,0,0,0.6);
 }
 
 .photo-preview-close {
   position: absolute;
-  top: 0.7rem;
-  right: 0.7rem;
-  width: 36px;
-  height: 36px;
+  top: -8px;
+  right: -8px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.75);
   color: #fff;
   font-size: 1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .photo-preview-close:hover {

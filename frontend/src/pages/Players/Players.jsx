@@ -169,7 +169,7 @@ const Players = () => {
           aria-label={`${previewPlayer.name} photo preview`}
         >
           <div
-            className="photo-preview-card"
+            className="photo-preview-circle-wrap"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -181,13 +181,10 @@ const Players = () => {
               ✕
             </button>
             <img
+              className="photo-preview-circle"
               src={getImageSrc(previewPlayer)}
               alt={previewPlayer.name}
             />
-            <div className="photo-preview-info">
-              <strong>{previewPlayer.name}</strong>
-              <span>{previewPlayer.role}{getPlayerTeam(previewPlayer, owners) ? ` • ${getPlayerTeam(previewPlayer, owners)}` : ''}</span>
-            </div>
           </div>
         </div>
       )}
