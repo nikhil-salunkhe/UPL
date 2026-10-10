@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import './PlayerAvatar.css';
-import { apiBaseUrl } from '../../services/api';
+import { apiBaseUrl, playerImageUrl } from '../../services/api';
 
 const getInitials = (name) =>
   name
@@ -12,14 +13,31 @@ const getInitials = (name) =>
 
 const PlayerAvatar = ({ player, name, size = 32 }) => {
   const displayName = (player?.name || name || '').trim();
-  const image = player?.image;
+  // List responses no longer embed photos — build the on-demand URL from the
+  // player id. If the photo turns out to be missing (404), fall back to initials.
+  // Track WHICH avatar failed (not a boolean) so switching players resets it
+  // without needing an effect.
+  const avatarId = player?._id || 'inline';
+  const [failedId, setFailedId] = useState(null);
+
+  const inlineImage = player?.image || '';
+  const image = failedId === avatarId ? '' : inlineImage || (player?._id ? playerImageUrl(player._id) : '');
   const style = { width: `${size}px`, height: `${size}px` };
 
-  if (typeof image === 'string' && image) {
+  if (image) {
     const src = image.startsWith('data:') || image.startsWith('http')
       ? image
       : `${apiBaseUrl}${image.startsWith('/') ? image : `/${image}`}`;
-    return <img className="player-avatar" src={src} alt={displayName} style={style} />;
+    return (
+      <img
+        className="player-avatar"
+        src={src}
+        alt={displayName}
+        style={style}
+        loading="lazy"
+        onError={() => setFailedId(avatarId)}
+      />
+    );
   }
 
   return (

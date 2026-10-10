@@ -256,3 +256,74 @@
   background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
 }
 
+/* Players tab: server-side status filter chips + pagination */
+.list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #eaf4ff;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  border-color: #ffd96f;
+}
+
+.filter-chip.active {
+  background: linear-gradient(135deg, #ffd96f, #f0b429);
+  color: #2b2140;
+  font-weight: 700;
+  border-color: transparent;
+}
+
+.list-heading {
+  margin: 0;
+  color: #ffd96f;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.pagination-controls button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #2ecf73, #1c8c56);
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagination-controls .page-info {
+  font-size: 0.82rem;
+  color: #b8f3cf;
+}
+
+.status-card .retry-btn {
+  margin-left: 0.6rem;
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: 0.7rem;
+  cursor: pointer;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #2ecf73, #1c8c56);
+}
+

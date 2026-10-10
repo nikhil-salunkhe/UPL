@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { approvePlayer, createPlayer, deletePlayer, getAllPlayers, updatePlayer } from '../../services/playerService';
@@ -28,6 +28,19 @@ const sortOwnersByOrder = (list) => [...(list || [])].sort(
   (a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0)
 );
 
+// Same rule as the backend: anything that is not 'pending' counts as approved
+// (legacy records stored before the status field existed are approved).
+const playerMatchesStatus = (player, status) => {
+  if (status === 'all') return true;
+  if (status === 'pending') return player.status === 'pending';
+  return player.status !== 'pending';
+};
+
+const countPlayersByStatus = (list) => {
+  const pending = list.filter((player) => player.status === 'pending').length;
+  return { all: list.length, pending, approved: list.length - pending };
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('players');
@@ -46,17 +59,104 @@ const AdminDashboard = () => {
   const [matchForm, setMatchForm] = useState(emptyMatch);
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [message, setMessage] = useState('');
+  const [playerPage, setPlayerPage] = useState(1);
+  const [playerStatus, setPlayerStatus] = useState('all'); // 'all' | 'pending' | 'approved'
+  const [playerPagination, setPlayerPagination] = useState(null);
+  const [playerCounts, setPlayerCounts] = useState(null);
+  const [playersLoading, setPlayersLoading] = useState(false);
+  const [playersError, setPlayersError] = useState('');
+  const [roster, setRoster] = useState([]); // full lightweight player list for captain/VC pickers
+  const didInitRef = useRef(false);
 
-  const loadData = async () => {
+  const PLAYERS_PAGE_SIZE = 25;
+
+  // Admin player list: paginated server-side, photos excluded from the payload
+  // (each photo is served on demand by GET /players/:id/image). Errors land in
+  // state so the panel can retry without blanking the rest of the dashboard.
+  const fetchPlayersPage = async (page = playerPage, status = playerStatus, isClamp = false) => {
+    setPlayersLoading(true);
+    setPlayersError('');
     try {
-      const [playerData, ownerData, sponsorData] = await Promise.all([getAllPlayers(), getOwners(), getSponsors()]);
-      setPlayers(playerData);
-      setOwners(sortOwnersByOrder(ownerData));
-      setSponsors(sponsorData);
+      const body = await getAllPlayers({ page, limit: PLAYERS_PAGE_SIZE, status });
+      const rawList = Array.isArray(body.data) ? body.data : [];
+      const isLegacy = !body.pagination; // older backend: one bare array
+
+      let list = rawList;
+      let counts = body.counts || null;
+
+      if (isLegacy) {
+        counts = countPlayersByStatus(rawList);
+        if (status !== 'all') {
+          list = rawList.filter((player) => playerMatchesStatus(player, status));
+        }
+      }
+
+      // After approving/rejecting the last item of a page the page can come
+      // back empty — snap back to the last page that still has players.
+      if (!isClamp && page > 1 && list.length === 0 && !isLegacy && body.pagination.total > 0) {
+        const lastPage = Math.max(1, Math.ceil(body.pagination.total / PLAYERS_PAGE_SIZE));
+        setPlayerPage(lastPage);
+        return fetchPlayersPage(lastPage, status, true);
+      }
+
+      setPlayers(list);
+      setPlayerPagination(body.pagination || null);
+      setPlayerCounts(counts);
     } catch (error) {
-      console.error(error);
+      setPlayers([]);
+      setPlayerPagination(null);
+      setPlayersError(
+        error.response?.data?.message || 'Could not load players. Check the connection and try again.'
+      );
+    } finally {
+      setPlayersLoading(false);
     }
   };
+
+  // Promise.allSettled: owners, sponsors and the captain/VC roster load
+  // independently — one slow or failed request can no longer discard the
+  // others (the old Promise.all dropped everything when players timed out).
+  const loadData = async () => {
+    const [, ownersResult, sponsorsResult, rosterResult] = await Promise.allSettled([
+      fetchPlayersPage(playerPage, playerStatus),
+      getOwners(),
+      getSponsors(),
+      getAllPlayers({ page: 1, limit: 1000 }) // full list, no photos (~KBs)
+    ]);
+
+    if (ownersResult.status === 'fulfilled') {
+      setOwners(sortOwnersByOrder(ownersResult.value));
+    }
+    if (sponsorsResult.status === 'fulfilled') {
+      setSponsors(sponsorsResult.value);
+    }
+    if (rosterResult.status === 'fulfilled') {
+      const body = rosterResult.value;
+      setRoster(Array.isArray(body) ? body : body.data || []);
+    }
+
+    const failed = [];
+    if (ownersResult.status === 'rejected') failed.push('owners');
+    if (sponsorsResult.status === 'rejected') failed.push('sponsors');
+    if (rosterResult.status === 'rejected') failed.push('player names');
+    // Player-list failures are surfaced inline in the players panel with Retry.
+    if (failed.length) {
+      setMessage(`Could not load: ${failed.join(', ')}. The rest of the dashboard loaded fine.`);
+    }
+  };
+
+  const changePlayerPage = (page) => {
+    setPlayerPage(page);
+    fetchPlayersPage(page, playerStatus);
+  };
+
+  const changePlayerStatus = (status) => {
+    setPlayerStatus(status);
+    setPlayerPage(1);
+    fetchPlayersPage(1, status);
+  };
+
+  const retryPlayers = () => fetchPlayersPage(playerPage, playerStatus);
 
   const loadMatches = async () => {
     try {
@@ -101,6 +201,11 @@ const AdminDashboard = () => {
       navigate('/admin/login');
       return;
     }
+
+    // Guard against double-invoked effects (React StrictMode in dev) so the
+    // dashboard never fires duplicate requests on mount.
+    if (didInitRef.current) return;
+    didInitRef.current = true;
 
     loadData();
     loadTournament();
@@ -308,9 +413,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const pendingPlayers = players.filter((p) => p.status === 'pending');
-  const approvedPlayers = players.filter((p) => p.status !== 'pending');
-
   const formatMatchDate = (date) => {
     if (!date) return 'TBD';
     const d = new Date(date);
@@ -321,8 +423,8 @@ const AdminDashboard = () => {
   // Get unique team names from registered owners (filter out empty/auction pending)
   const registeredTeams = [...new Set(owners.map(o => o.team).filter(t => t && t !== 'Auction Pending'))];
 
-  const selectedCaptain = players.find((player) => player.name === cleanLeaderName(ownerForm.captain));
-  const selectedViceCaptain = players.find((player) => player.name === cleanLeaderName(ownerForm.viceCaptain));
+  const selectedCaptain = roster.find((player) => player.name === cleanLeaderName(ownerForm.captain));
+  const selectedViceCaptain = roster.find((player) => player.name === cleanLeaderName(ownerForm.viceCaptain));
 
   return (
     <div className="admin-dashboard">
@@ -338,7 +440,7 @@ const AdminDashboard = () => {
 
       <main className="dashboard-main">
         <div className="dashboard-cards">
-          <div className="metric-card"><h3>{players.length}</h3><p>Players</p></div>
+          <div className="metric-card"><h3>{playerCounts ? playerCounts.all : players.length}</h3><p>Players</p></div>
           <div className="metric-card"><h3>{owners.length}</h3><p>Owners</p></div>
           <div className="metric-card"><h3>{sponsors.length}</h3><p>Sponsors</p></div>
           <div className="metric-card"><h3>{matches.length}</h3><p>Matches</p></div>
@@ -362,41 +464,66 @@ const AdminDashboard = () => {
               <button type="submit">Save Player</button>
             </form>
             <div className="admin-list">
-              {pendingPlayers.length > 0 && (
-                <div className="pending-box">
-                  <h4>⏳ Pending Approvals ({pendingPlayers.length})</h4>
-                  {pendingPlayers.map((player) => (
-                    <div key={player._id} className="admin-item pending-item">
-                      <div>
-                        <strong>{player.name}</strong>
-                        <p>{player.role}{player.team ? ` • ${player.team}` : ''}</p>
-                      </div>
-                      <div className="admin-actions">
-                        <button className="approve-btn" onClick={() => handleApprovePlayer(player._id)}>Approve ✅</button>
-                        <button className="reject-btn" onClick={() => handleRejectPlayer(player._id, player.name)}>Reject ❌</button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="list-filters">
+                <button type="button" className={`filter-chip${playerStatus === 'all' ? ' active' : ''}`} onClick={() => changePlayerStatus('all')}>
+                  All{playerCounts ? ` (${playerCounts.all})` : ''}
+                </button>
+                <button type="button" className={`filter-chip${playerStatus === 'pending' ? ' active' : ''}`} onClick={() => changePlayerStatus('pending')}>
+                  ⏳ Pending{playerCounts ? ` (${playerCounts.pending})` : ''}
+                </button>
+                <button type="button" className={`filter-chip${playerStatus === 'approved' ? ' active' : ''}`} onClick={() => changePlayerStatus('approved')}>
+                  ✅ Approved{playerCounts ? ` (${playerCounts.approved})` : ''}
+                </button>
+              </div>
+
+              <h4 className="list-heading">
+                Players {playerPagination ? `(${playerPagination.total})` : `(${playerCounts ? playerCounts.all : players.length})`}
+              </h4>
+
+              {playersLoading && <div className="status-card">Loading players…</div>}
+
+              {!playersLoading && playersError && (
+                <div className="status-card">
+                  ⚠️ {playersError}
+                  <button type="button" className="retry-btn" onClick={retryPlayers}>Retry</button>
                 </div>
               )}
 
-              {pendingPlayers.length === 0 && (
-                <div className="status-card">No pending registrations 🎉</div>
+              {!playersLoading && !playersError && players.length === 0 && (
+                <div className="status-card">
+                  {playerStatus === 'pending' ? 'No pending registrations 🎉' : 'No players found for this filter.'}
+                </div>
               )}
 
-              <h4 className="approved-heading">Approved Players ({approvedPlayers.length})</h4>
-              {approvedPlayers.map((player) => (
-                <div key={player._id} className="admin-item">
+              {!playersLoading && !playersError && players.map((player) => (
+                <div key={player._id} className={`admin-item${player.status === 'pending' ? ' pending-item' : ''}`}>
                   <div>
                     <strong>{player.name}</strong>
-                    <p>{player.team}</p>
+                    <p>{player.role}{player.team ? ` • ${player.team}` : ''}</p>
                   </div>
                   <div className="admin-actions">
-                    <button onClick={() => { setPlayerForm({ ...emptyPlayer, ...player, image: '' }); setEditingPlayerId(player._id); }}>Edit</button>
-                    <button onClick={() => deleteEntry('player', player._id)}>Delete</button>
+                    {player.status === 'pending' ? (
+                      <>
+                        <button className="approve-btn" onClick={() => handleApprovePlayer(player._id)}>Approve ✅</button>
+                        <button className="reject-btn" onClick={() => handleRejectPlayer(player._id, player.name)}>Reject ❌</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => { setPlayerForm({ ...emptyPlayer, ...player, image: '' }); setEditingPlayerId(player._id); }}>Edit</button>
+                        <button onClick={() => deleteEntry('player', player._id)}>Delete</button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
+
+              {!playersError && playerPagination && playerPagination.totalPages > 1 && (
+                <div className="pagination-controls">
+                  <button type="button" onClick={() => changePlayerPage(playerPage - 1)} disabled={playerPage <= 1}>← Prev</button>
+                  <span className="page-info">Page {playerPage} of {playerPagination.totalPages}</span>
+                  <button type="button" onClick={() => changePlayerPage(playerPage + 1)} disabled={playerPage >= playerPagination.totalPages}>Next →</button>
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -411,28 +538,28 @@ const AdminDashboard = () => {
               <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Captain (select from added players)</label>
               <select value={ownerForm.captain} onChange={(e) => setOwnerForm({ ...ownerForm, captain: e.target.value })}>
                 <option value="">-- Select Captain --</option>
-                {players.map((player) => (
+                {roster.map((player) => (
                   <option key={player._id} value={player.name} disabled={player.name === ownerForm.viceCaptain}>
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
                 ))}
-                {cleanLeaderName(ownerForm.captain) && !players.some((player) => player.name === cleanLeaderName(ownerForm.captain)) && (
+                {cleanLeaderName(ownerForm.captain) && !roster.some((player) => player.name === cleanLeaderName(ownerForm.captain)) && (
                   <option value={cleanLeaderName(ownerForm.captain)}>{cleanLeaderName(ownerForm.captain)}</option>
                 )}
               </select>
               <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Vice Captain (select from added players)</label>
               <select value={ownerForm.viceCaptain} onChange={(e) => setOwnerForm({ ...ownerForm, viceCaptain: e.target.value })}>
                 <option value="">-- Select Vice Captain --</option>
-                {players.map((player) => (
+                {roster.map((player) => (
                   <option key={player._id} value={player.name} disabled={player.name === ownerForm.captain}>
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
                 ))}
-                {cleanLeaderName(ownerForm.viceCaptain) && !players.some((player) => player.name === cleanLeaderName(ownerForm.viceCaptain)) && (
+                {cleanLeaderName(ownerForm.viceCaptain) && !roster.some((player) => player.name === cleanLeaderName(ownerForm.viceCaptain)) && (
                   <option value={cleanLeaderName(ownerForm.viceCaptain)}>{cleanLeaderName(ownerForm.viceCaptain)}</option>
                 )}
               </select>
-              {players.length === 0 && (
+              {roster.length === 0 && (
                 <p style={{ fontSize: '0.8rem', color: '#ffd96f' }}>No players added yet — add players first to select captain &amp; vice captain.</p>
               )}
               {(selectedCaptain || selectedViceCaptain) && (
@@ -467,11 +594,11 @@ const AdminDashboard = () => {
                       return (
                     <p style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.85rem' }}>
                       <span className="player-cell">
-                        {c && <PlayerAvatar player={players.find((player) => player.name === c)} name={c} size={24} />}
+                        {c && <PlayerAvatar player={roster.find((player) => player.name === c)} name={c} size={24} />}
                         C: {c || 'TBD'}
                       </span>
                       <span className="player-cell">
-                        {vc && <PlayerAvatar player={players.find((player) => player.name === vc)} name={vc} size={24} />}
+                        {vc && <PlayerAvatar player={roster.find((player) => player.name === vc)} name={vc} size={24} />}
                         VC: {vc || 'TBD'}
                       </span>
                     </p>

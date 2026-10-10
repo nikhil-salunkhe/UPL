@@ -3,16 +3,29 @@ import { getPlayers } from '../../services/playerService';
 import { getOwners } from '../../services/ownerService';
 import './Players.css';
 
-import { apiBaseUrl } from '../../services/api';
+import { apiBaseUrl, playerImageUrl } from '../../services/api';
+
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=200&q=80';
 
 const getImageSrc = (player) => {
-  if (!player.image) {
-    return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=200&q=80';
+  if (player.image) {
+    // Older backends still embed the photo; keep working with that shape.
+    if (player.image.startsWith('data:') || player.image.startsWith('http')) {
+      return player.image;
+    }
+    return `${apiBaseUrl}${player.image.startsWith('/') ? player.image : `/${player.image}`}`;
   }
-  if (player.image.startsWith('data:') || player.image.startsWith('http')) {
-    return player.image;
-  }
-  return `${apiBaseUrl}${player.image.startsWith('/') ? player.image : `/${player.image}`}`;
+  // List responses exclude photos — point the <img> at the on-demand endpoint.
+  if (player._id) return playerImageUrl(player._id);
+  return PLACEHOLDER_IMAGE;
+};
+
+// Photos are fetched lazily; if one is missing on the server (404), swap in
+// the placeholder once instead of showing a broken image.
+const handleImageError = (event) => {
+  const img = event.currentTarget;
+  img.onerror = null;
+  img.src = PLACEHOLDER_IMAGE;
 };
 
 // Captain / vice-captain are player NAMES — guard against corrupted records
@@ -141,7 +154,7 @@ const Players = () => {
                         onClick={() => setPreviewPlayer(player)}
                         aria-label={`View ${player.name} photo`}
                       >
-                        <img src={getImageSrc(player)} alt={player.name} />
+                        <img src={getImageSrc(player)} alt={player.name} loading="lazy" onError={handleImageError} />
                       </button>
                     </td>
                     <td>
@@ -184,6 +197,7 @@ const Players = () => {
               className="photo-preview-circle"
               src={getImageSrc(previewPlayer)}
               alt={previewPlayer.name}
+              onError={handleImageError}
             />
           </div>
         </div>

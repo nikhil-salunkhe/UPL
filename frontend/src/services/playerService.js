@@ -15,9 +15,17 @@ export const registerPlayer = async (payload) => {
   return response.data;
 };
 
-export const getAllPlayers = async () => {
-  const response = await api.get('/players/all');
-  return response.data;
+export const getAllPlayers = async ({ page = 1, limit = 25, status } = {}) => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (status && status !== 'all') params.set('status', status);
+  const response = await api.get(`/players/all?${params.toString()}`);
+  const body = response.data;
+  // Older backends return a bare array (no envelope). Normalize so both shapes
+  // work regardless of which service deploys first.
+  if (Array.isArray(body)) {
+    return { success: true, data: body, pagination: null, counts: null };
+  }
+  return body;
 };
 
 export const approvePlayer = async (id) => {

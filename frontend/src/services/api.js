@@ -2,11 +2,18 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 10000
+  // 10s timed out because list payloads were ~20 MB (base64 photos embedded in
+  // the JSON). List responses are now projected + paginated (<100 KB), so this
+  // only needs headroom for Render cold-start wake-up (~5–20s) — deliberately
+  // not higher, so genuinely slow queries still surface as errors.
+  timeout: 15000
 });
 
 const rawBaseUrl = import.meta.env.VITE_API_URL || '/api';
 export const apiBaseUrl = rawBaseUrl.replace(/\/api$/, '');
+
+// Single photos are served on demand (list responses exclude them).
+export const playerImageUrl = (id) => (id ? `${apiBaseUrl}/api/players/${id}/image` : '');
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('adminToken');

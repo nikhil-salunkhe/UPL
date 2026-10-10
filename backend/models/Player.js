@@ -11,4 +11,8 @@ const playerSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// List queries: public list filters by status and both lists sort newest-first.
+playerSchema.index({ status: 1, createdAt: -1 });
+playerSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Player', playerSchema);

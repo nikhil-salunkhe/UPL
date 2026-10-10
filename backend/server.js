@@ -47,6 +47,25 @@ app.use(
 );
 
 /* ============================
+   Request logging: method, path, status, duration.
+   Path only — never headers, bodies, tokens or query strings.
+============================ */
+
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    const line = `${req.method} ${req.originalUrl.split('?')[0]} -> ${res.statusCode} in ${durationMs.toFixed(0)}ms`;
+    if (res.statusCode >= 500 || durationMs >= 1000) {
+      console.warn(`⚠️ ${line}`);
+    } else {
+      console.log(line);
+    }
+  });
+  next();
+});
+
+/* ============================
    Middleware
 ============================ */
 
@@ -76,6 +95,11 @@ app.use('/api/owners', require('./routes/ownerRoutes'));
 app.use('/api/sponsors', require('./routes/sponsorRoutes'));
 app.use('/api/tournament', require('./routes/tournamentRoutes'));
 app.use('/api/matches', require('./routes/matchRoutes'));
+
+// Unknown API paths answer with JSON (never HTML) and a correct 404.
+app.use('/api', (req, res) => {
+  res.status(404).json({ message: 'API endpoint not found' });
+});
 
 /* ============================
    MongoDB Connection
