@@ -24,6 +24,10 @@ const cleanLeaderName = (name) => {
   return trimmed;
 };
 
+const sortOwnersByOrder = (list) => [...(list || [])].sort(
+  (a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0)
+);
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('players');
@@ -47,7 +51,7 @@ const AdminDashboard = () => {
     try {
       const [playerData, ownerData, sponsorData] = await Promise.all([getAllPlayers(), getOwners(), getSponsors()]);
       setPlayers(playerData);
-      setOwners(ownerData);
+      setOwners(sortOwnersByOrder(ownerData));
       setSponsors(sponsorData);
     } catch (error) {
       console.error(error);
@@ -259,14 +263,27 @@ const AdminDashboard = () => {
     const reordered = [...owners];
     const [moved] = reordered.splice(index, 1);
     reordered.splice(newIndex, 0, moved);
-    setOwners(reordered);
+    // Stamp local displayOrder immediately so #numbers follow the new sequence
+    // even if the backend save fails or the old backend is still live.
+    const withOrder = reordered.map((o, i) => ({ ...o, displayOrder: i + 1 }));
+    setOwners(withOrder);
     try {
-      const updated = await reorderOwners(reordered.map((o) => o._id));
-      if (Array.isArray(updated) && updated.length) setOwners(updated);
+      const updated = await reorderOwners(withOrder.map((o) => o._id));
+      if (Array.isArray(updated) && updated.length) {
+        setOwners(sortOwnersByOrder(updated));
+      }
       setMessage(`"${moved.team || moved.name}" moved to position ${newIndex + 1} ✅`);
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Reorder failed — please retry');
-      loadData();
+      const status = error.response?.status;
+      const serverMsg = error.response?.data?.message;
+      if (status === 404) {
+        // Old backend without PUT /owners/reorder: order stays locally and
+        // Home still sorts by displayOrder once backend is redeployed.
+        setMessage(`"${moved.team || moved.name}" moved to #${newIndex + 1} locally — redeploy backend to save it permanently ⚠️`);
+      } else {
+        setMessage(serverMsg || 'Reorder failed — please retry');
+        loadData();
+      }
     }
   };
 
@@ -463,17 +480,19 @@ const AdminDashboard = () => {
                   </div>
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => moveOwner(index, -1)}
                       disabled={index === 0}
                       title="Move up (show earlier on Home)"
-                      style={{ opacity: index === 0 ? 0.4 : 1 }}
-                    >↑</button>
+                      style={{ minWidth: '44px', fontSize: '1.05rem', opacity: index === 0 ? 0.4 : 1 }}
+                    >↑ Up</button>
                     <button
+                      type="button"
                       onClick={() => moveOwner(index, 1)}
                       disabled={index === owners.length - 1}
                       title="Move down (show later on Home)"
-                      style={{ opacity: index === owners.length - 1 ? 0.4 : 1 }}
-                    >↓</button>
+                      style={{ minWidth: '44px', fontSize: '1.05rem', opacity: index === owners.length - 1 ? 0.4 : 1 }}
+                    >↓ Down</button>
                     <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, captain: cleanLeaderName(owner.captain), viceCaptain: cleanLeaderName(owner.viceCaptain), image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('owner', owner._id)}>Delete</button>
                   </div>
