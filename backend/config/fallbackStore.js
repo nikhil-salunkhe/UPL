@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { normalizeForCompare, imageFingerprint } = require('./registrationGuard');
 
 const createSampleId = (prefix) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
@@ -83,6 +84,30 @@ function createPlayer(payload) {
   getState().players.unshift(player);
   return player;
 }
+
+  // Duplicate guard (mirrors the MongoDB version in playerController.js):
+  // same pending name + role, same team when photos mismatch, 10-minute window.
+  // Matching store records are returned for retries; new registrations still
+  // get a fresh player.
+  function findDuplicatePlayer(name, role, payload) {
+    const state = getState();
+    const now = Date.now();
+    return state.players.find((player) => {
+      if (player.status !== 'pending') return false;
+      if (normalizeForCompare(player.name) !== normalizeForCompare(name)) return false;
+      if (normalizeForCompare(player.role) !== normalizeForCompare(role)) return false;
+
+      const playerImage = player.image;
+      const incomingImage = payload.image;
+      const existingDataUrl = typeof playerImage === 'string' && playerImage.startsWith('data:');
+      const incomingDataUrl = typeof incomingImage === 'string' && incomingImage.startsWith('data:');
+
+      if (existingDataUrl && incomingDataUrl) {
+        return imageFingerprint(playerImage) === imageFingerprint(incomingImage);
+      }
+      return normalizeForCompare(player.team) === normalizeForCompare(payload.team);
+    }) || null;
+  }
 
 function updatePlayer(id, payload) {
   const players = getState().players;

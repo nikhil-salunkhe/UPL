@@ -168,6 +168,25 @@ async function run() {
   check('public registration creates a pending player', reg.status === 201 && reg.body?.status === 'pending', `status=${reg.body?.status}`);
   const probeId = reg.body?._id;
 
+  // Retry of a registration that was saved by the server but whose response
+  // timed out (e.g. Render free instance waking up, or a slow mobile uplink
+  // with a photo). The retry must return the original record (200 +
+  // alreadyRegistered) instead of creating a second pending player, keeping
+  // the admin totals (pending / all) unchanged.
+  const dupPayload = JSON.stringify({ name: 'Workflow Probe', role: 'Bowler', team: '' });
+  const retry1 = await req('/players/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: dupPayload });
+  check('retry registers normally when the original succeeded', retry1.status === 201, `status=${retry1.status}`);
+  const retryId1 = retry1.body?._id;
+  check('retry response is pending', retry1.body?.status === 'pending');
+
+  const retry2 = await req('/players/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: dupPayload });
+  check('retry after success returns the original record (200)', retry2.status === 200, `status=${retry2.status}`);
+  check('retry creates no duplicate pending player (alreadyRegistered)', retry2.body?.alreadyRegistered === true);
+  check('retry returns the identical record id', retry2.body?._id === retryId1);
+
+  const totalsAfterRetry = await req('/players/all?page=1&limit=1', { headers: jsonHeaders(token) });
+  check('admin totals unchanged by the retry (41 pending / 121 all)', totalsAfterRetry.body?.counts?.pending === 41 && totalsAfterRetry.body?.counts?.all === 121, JSON.stringify(totalsAfterRetry.body?.counts));
+
   const afterRegister = await req('/players/all?page=1&limit=1', { headers: jsonHeaders(token) });
   check('registered player appears as pending in admin list', afterRegister.body?.counts?.pending === 41 && afterRegister.body?.counts?.all === 121, JSON.stringify(afterRegister.body?.counts));
 

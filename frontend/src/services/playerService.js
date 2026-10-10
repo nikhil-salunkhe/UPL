@@ -11,7 +11,12 @@ export const createPlayer = async (payload) => {
 };
 
 export const registerPlayer = async (payload) => {
-  const response = await api.post('/players/register', payload);
+  // Self-registration uploads a photo (multipart) and can first hit Render's
+  // sleeping free instance, which takes 20–40s to wake. Give this single
+  // request far more time than the 15s timeout used by the paginated list
+  // endpoints — deliberately NOT raised for list requests, so genuinely slow
+  // queries still fail fast instead of hiding the problem.
+  const response = await api.post('/players/register', payload, { timeout: 45000 });
   return response.data;
 };
 

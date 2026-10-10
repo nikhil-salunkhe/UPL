@@ -35,19 +35,31 @@ const PlayerRegister = () => {
     if (form.image) payload.append('image', form.image);
 
     try {
-      await registerPlayer(payload);
+      const result = await registerPlayer(payload);
+      const alreadyRegistered = Boolean(result?.alreadyRegistered);
       setStatus({
         type: 'success',
-        message: '✅ Registration submitted! The admin will review and approve it. You will appear in the Players list once approved.'
+        message: alreadyRegistered
+          ? '✅ Already registered! Your earlier entry is still waiting for admin approval — no need to sign up again.'
+          : '✅ Registration submitted! The admin will review and approve it. You will appear in the Players list once approved.'
       });
       setForm(emptyForm);
       setPreview('');
       e.target.reset();
     } catch (error) {
-      setStatus({
-        type: 'error',
-        message: error.response?.data?.message || 'Registration failed. Please try again.'
-      });
+      const isTimeout =
+        error.code === 'ECONNABORTED' || /timeout/i.test(String(error.message || ''));
+      const isNetworkError = !error.response;
+      let message = error.response?.data?.message || 'Registration failed. Please try again.';
+
+      if (isTimeout) {
+        message =
+          '⏱ The server took too long to respond (it may be waking up after sleep). Please wait a few seconds and try again — retrying is safe.';
+      } else if (isNetworkError) {
+        message = '🌐 Could not reach the server — check your connection and try again.';
+      }
+
+      setStatus({ type: 'error', message });
     } finally {
       setSubmitting(false);
     }

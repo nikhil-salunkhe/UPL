@@ -5,6 +5,9 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const jwt = require('jsonwebtoken');
+const { validationResult } = require('express-validator');
 const Admin = require('./models/Admin');
 
 dotenv.config();
@@ -48,7 +51,7 @@ app.use(
 
 /* ============================
    Request logging: method, path, status, duration.
-   Path only — never headers, bodies, tokens or query strings.
+   Path only never headers, bodies, tokens or query strings.
 ============================ */
 
 app.use((req, res, next) => {
@@ -57,7 +60,7 @@ app.use((req, res, next) => {
     const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
     const line = `${req.method} ${req.originalUrl.split('?')[0]} -> ${res.statusCode} in ${durationMs.toFixed(0)}ms`;
     if (res.statusCode >= 500 || durationMs >= 1000) {
-      console.warn(`⚠️ ${line}`);
+      console.warn(`${line}`);
     } else {
       console.log(line);
     }
@@ -101,6 +104,23 @@ app.use('/api', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });
 });
 
+// Turn multer upload errors (file too large / not an image) into clean JSON
+// responses. The public registration form otherwise receives an HTML 500
+// plus a generic failure message — exactly what users see when their first
+// submit 'fails' on a slow connection (the timeout kills the response, but
+// the server still saved the player). The client retry now returns the
+// original record instead of creating a duplicate pending player.
+app.use((err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  if (err instanceof multer.MulterError || err.message === 'Only image files are allowed') {
+    return res.status(400).json({ message: err.message });
+  }
+  console.error('Unexpected server error:', err);
+  res.status(500).json({ message: 'Registration failed. Please try again.' });
+});
+
 /* ============================
    MongoDB Connection
 ============================ */
@@ -108,14 +128,14 @@ app.use('/api', (req, res) => {
 const mongoUri = process.env.MONGODB_URI;
 
 if (!mongoUri) {
-  console.error('❌ MONGODB_URI not found in environment variables.');
+  console.error('MONGODB_URI not found in environment variables.');
   process.exit(1);
 }
 
 mongoose
   .connect(mongoUri)
   .then(async () => {
-    console.log('✅ MongoDB Connected Successfully');
+    console.log('MongoDB Connected Successfully');
 
     const existingAdmin = await Admin.findOne({
       username: 'admin'
@@ -129,15 +149,15 @@ mongoose
         password: hashedPassword
       });
 
-      console.log('✅ Default Admin Created');
+      console.log('Default Admin Created');
     }
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error('❌ MongoDB Connection Failed');
+    console.error('MongoDB Connection Failed');
     console.error(err.message);
     process.exit(1);
   });

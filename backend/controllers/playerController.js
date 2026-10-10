@@ -259,6 +259,16 @@ exports.registerPlayer = async (req, res) => {
       status: 'pending'
     };
 
+    // The first attempt can be saved by the server while its response is lost
+    // (Render free instance waking up, slow mobile uplink with a photo).
+    // This guard makes the retry return the original record instead of
+    // creating a duplicate pending player, and never merges two different
+    // registrations within the last 10 minutes.
+    const duplicate = await findRecentDuplicateRegistration(name, role, payload);
+    if (duplicate) {
+      return res.status(200).json({ ...duplicate, alreadyRegistered: true });
+    }
+
     if (!isMongoConnected()) {
       const player = createStorePlayer(payload);
       return res.status(201).json(player);
@@ -270,6 +280,23 @@ exports.registerPlayer = async (req, res) => {
     res.status(500).json({ message: 'Registration failed', error: error.message });
   }
 };
+
+// Look up a pending player that matches the retry exactly: same name + role,
+// same team when photos are missing, and created within the last 10 minutes.
+// Returns null for brand-new registrations.
+async function findRecentDuplicateRegistration(name, role, payload) {
+  if (!isMongoConnected()) return null;
+  const windowMs = 10 * 60 * 1000;
+
+  const candidates = await Player.find({ name, role, status: 'pending' })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .lean();
+  return candidates.find((player) => {
+    if (!createdAtWithinWindow(player.createdAt, Date.now(), windowMs)) return false;
+    return isRecentDuplicatePlayer(player, payload, windowMs, Date.now());
+  }) || null;
+}
 
 // ADMIN: approve a pending registration
 exports.approvePlayer = async (req, res) => {
