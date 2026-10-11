@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getOwners } from '../../services/ownerService';
 import { getPlayers } from '../../services/playerService';
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
+import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
 import { apiBaseUrl } from '../../services/api';
 import './Owners.css';
 
@@ -27,6 +28,7 @@ const Owners = () => {
   const [owners, setOwners] = useState([]);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewOwner, setPreviewOwner] = useState(null);
 
   const playersByName = useMemo(
     () => Object.fromEntries(players.map((player) => [player.name, player])),
@@ -93,7 +95,16 @@ const Owners = () => {
                 .sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
                 .map((owner) => (
                 <tr key={owner._id}>
-                  <td className="img-cell"><img src={getImageSrc(owner)} alt={owner.name} /></td>
+                  <td className="img-cell">
+                    <button
+                      type="button"
+                      className="img-preview-btn"
+                      onClick={() => setPreviewOwner(owner)}
+                      aria-label={`View ${owner.name} photo`}
+                    >
+                      <img src={getImageSrc(owner)} alt={owner.name} loading="lazy" />
+                    </button>
+                  </td>
                   <td>{owner.name}</td>
                   <td>{owner.team || <span className="team-pending">—</span>}</td>
                   <td>{owner.captain ? renderLeader(owner.captain) : <span className="leader-empty">TBD</span>}</td>
@@ -104,6 +115,14 @@ const Owners = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {previewOwner && (
+        <PhotoPreview
+          src={getImageSrc(previewOwner)}
+          alt={previewOwner.name}
+          onClose={() => setPreviewOwner(null)}
+        />
       )}
     </div>
   );

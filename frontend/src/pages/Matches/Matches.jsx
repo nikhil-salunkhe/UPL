@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getMatches } from '../../services/matchService';
 import { getTournament } from '../../services/tournamentService';
 import { getOwners } from '../../services/ownerService';
+import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
 import { apiBaseUrl } from '../../services/api';
 import './Matches.css';
 
@@ -10,6 +11,7 @@ const Matches = () => {
   const [tournament, setTournament] = useState(null);
   const [teamLogos, setTeamLogos] = useState({});
   const [loading, setLoading] = useState(true);
+  const [previewLogo, setPreviewLogo] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -83,7 +85,14 @@ const Matches = () => {
       <div className="match-teams">
         <div className="team team-a">
           {teamLogos[match.teamA] ? (
-            <img src={teamLogos[match.teamA]} alt={match.teamA} className="team-logo" />
+            <button
+              type="button"
+              className="img-preview-btn"
+              onClick={() => setPreviewLogo({ src: teamLogos[match.teamA], name: match.teamA })}
+              aria-label={`View ${match.teamA} team logo`}
+            >
+              <img src={teamLogos[match.teamA]} alt={match.teamA} className="team-logo" loading="lazy" />
+            </button>
           ) : (
             <div className="team-logo-placeholder">🏏</div>
           )}
@@ -95,7 +104,14 @@ const Matches = () => {
         </div>
         <div className="team team-b">
           {teamLogos[match.teamB] ? (
-            <img src={teamLogos[match.teamB]} alt={match.teamB} className="team-logo" />
+            <button
+              type="button"
+              className="img-preview-btn"
+              onClick={() => setPreviewLogo({ src: teamLogos[match.teamB], name: match.teamB })}
+              aria-label={`View ${match.teamB} team logo`}
+            >
+              <img src={teamLogos[match.teamB]} alt={match.teamB} className="team-logo" loading="lazy" />
+            </button>
           ) : (
             <div className="team-logo-placeholder">🏏</div>
           )}
@@ -109,7 +125,7 @@ const Matches = () => {
     </div>
   );
 
-  const renderDayGroup = (grouped, lotLabel) => (
+  const renderDayGroup = (grouped) => (
     Object.entries(grouped).map(([date, dayMatches]) => (
       <div key={date} className="match-day-group">
         <div className="match-day-header">
@@ -157,7 +173,7 @@ const Matches = () => {
             {lotAMatches.length === 0 ? (
               <div className="status-card">No Lot A matches scheduled.</div>
             ) : (
-              renderDayGroup(lotAGrouped, 'Lot A')
+              renderDayGroup(lotAGrouped)
             )}
           </div>
 
@@ -170,7 +186,7 @@ const Matches = () => {
             {lotBMatches.length === 0 ? (
               <div className="status-card">No Lot B matches scheduled.</div>
             ) : (
-              renderDayGroup(lotBGrouped, 'Lot B')
+              renderDayGroup(lotBGrouped)
             )}
           </div>
 
@@ -181,10 +197,18 @@ const Matches = () => {
                 <h2>Other Matches</h2>
                 <span className="lot-match-count">{unassignedMatches.length} matches</span>
               </div>
-              {renderDayGroup(unassignedGrouped, 'Other')}
+              {renderDayGroup(unassignedGrouped)}
             </div>
           )}
         </div>
+      )}
+
+      {previewLogo && (
+        <PhotoPreview
+          src={previewLogo.src}
+          alt={previewLogo.name}
+          onClose={() => setPreviewLogo(null)}
+        />
       )}
     </div>
   );

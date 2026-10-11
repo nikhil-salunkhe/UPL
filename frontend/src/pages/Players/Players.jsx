@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPlayers } from '../../services/playerService';
 import { getOwners } from '../../services/ownerService';
+import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
 import './Players.css';
 
 import { apiBaseUrl, playerImageUrl } from '../../services/api';
@@ -81,19 +82,6 @@ const Players = () => {
 
     loadPlayers();
   }, []);
-
-  useEffect(() => {
-    if (!previewPlayer) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setPreviewPlayer(null);
-    };
-    window.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [previewPlayer]);
 
   const teams = useMemo(
     () => ['All', ...new Set(players.map((player) => getPlayerTeam(player, owners)).filter(Boolean))],
@@ -176,33 +164,12 @@ const Players = () => {
       )}
 
       {previewPlayer && (
-        <div
-          className="photo-preview-overlay"
-          onClick={() => setPreviewPlayer(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${previewPlayer.name} photo preview`}
-        >
-          <div
-            className="photo-preview-circle-wrap"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="photo-preview-close"
-              onClick={() => setPreviewPlayer(null)}
-              aria-label="Close photo preview"
-            >
-              ✕
-            </button>
-            <img
-              className="photo-preview-circle"
-              src={getImageSrc(previewPlayer)}
-              alt={previewPlayer.name}
-              onError={handleImageError}
-            />
-          </div>
-        </div>
+        <PhotoPreview
+          src={getImageSrc(previewPlayer)}
+          alt={previewPlayer.name}
+          onClose={() => setPreviewPlayer(null)}
+          onError={handleImageError}
+        />
       )}
     </div>
   );

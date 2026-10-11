@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSponsors } from '../../services/sponsorService';
+import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
 import { apiBaseUrl } from '../../services/api';
 import './Sponsors.css';
 
@@ -16,6 +17,7 @@ const getImageSrc = (sponsor) => {
 const Sponsors = () => {
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewSponsor, setPreviewSponsor] = useState(null);
 
   useEffect(() => {
     const loadSponsors = async () => {
@@ -59,7 +61,16 @@ const Sponsors = () => {
             <tbody>
               {sponsors.map((sponsor) => (
                 <tr key={sponsor._id}>
-                  <td className="img-cell"><img src={getImageSrc(sponsor)} alt={sponsor.companyName} /></td>
+                  <td className="img-cell">
+                    <button
+                      type="button"
+                      className="img-preview-btn"
+                      onClick={() => setPreviewSponsor(sponsor)}
+                      aria-label={`View ${sponsor.companyName || sponsor.sponsorName || sponsor.name} photo`}
+                    >
+                      <img src={getImageSrc(sponsor)} alt={sponsor.companyName || sponsor.sponsorName || sponsor.name} loading="lazy" />
+                    </button>
+                  </td>
                   <td>{sponsor.companyName || sponsor.sponsorName || sponsor.name}</td>
                   <td>{sponsor.sponsoredPrice || 'Not shared'}</td>
                   <td>{sponsor.phone}</td>
@@ -68,6 +79,14 @@ const Sponsors = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {previewSponsor && (
+        <PhotoPreview
+          src={getImageSrc(previewSponsor)}
+          alt={previewSponsor.companyName || previewSponsor.sponsorName || previewSponsor.name}
+          onClose={() => setPreviewSponsor(null)}
+        />
       )}
     </div>
   );
