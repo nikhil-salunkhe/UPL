@@ -10,7 +10,7 @@ const Hero = () => {
         <p className="hero-subtitle">A weekend of fierce competition, raw talent, and neighborhood pride.</p>
         <div className="hero-meta">
           <span>📍 जुगाइदेवी स्टेडियम उरूल</span>
-          <span>🏘️ ऊरूल </span>
+          <span>🏘️ उरूल </span>
         </div>
       </div>
     </section>
