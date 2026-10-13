@@ -7,7 +7,10 @@ exports.getActiveTournament = async (req, res) => {
       const tournament = getTournament();
       return res.json(tournament);
     }
+    const start = process.hrtime.bigint();
     const tournament = await Tournament.findOne({ isActive: true }).sort({ createdAt: -1 });
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(`[api-timing] GET /tournament: ${durationMs.toFixed(0)}ms`);
     res.json(tournament);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch tournament', error: error.message });

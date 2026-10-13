@@ -416,3 +416,34 @@
     gap: 0.75rem;
   }
 }
+
+.section-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.4rem;
+  margin: 0.5rem 0;
+  border-radius: 1rem;
+  background: rgba(255, 92, 92, 0.08);
+  border: 1px solid rgba(255, 92, 92, 0.25);
+  color: #ffd6d6;
+  font-size: 0.95rem;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.section-error .retry-btn {
+  padding: 0.45rem 1.1rem;
+  border: none;
+  border-radius: 0.7rem;
+  cursor: pointer;
+  font-weight: 700;
+  color: #06251a;
+  background: linear-gradient(135deg, #2ecf73, #1c8c56);
+}
+
+.section-error .retry-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

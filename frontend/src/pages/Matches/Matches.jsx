@@ -3,7 +3,7 @@ import { getMatches } from '../../services/matchService';
 import { getTournament } from '../../services/tournamentService';
 import { getOwners } from '../../services/ownerService';
 import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
-import { apiBaseUrl } from '../../services/api';
+import { apiBaseUrl, ownerImageUrl } from '../../services/api';
 import './Matches.css';
 
 const Matches = () => {
@@ -24,13 +24,19 @@ const Matches = () => {
         const logoMap = {};
         ownersData.forEach(owner => {
           if (owner.team && owner.team !== 'Auction Pending') {
+            // The owners list no longer embeds the base64 photo, so build the
+            // on-demand URL from the owner id. Honour any inline data URL / path
+            // from older or admin responses.
             let imageUrl = '';
             if (owner.image) {
               if (owner.image.startsWith('data:') || owner.image.startsWith('http')) {
                 imageUrl = owner.image;
-              } else {
-                imageUrl = `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
+              } else if (owner.image.startsWith('/')) {
+                imageUrl = `${apiBaseUrl}${owner.image}`;
               }
+            }
+            if (!imageUrl && owner._id) {
+              imageUrl = ownerImageUrl(owner._id);
             }
             logoMap[owner.team] = imageUrl;
           }

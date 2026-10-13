@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
-const { getOwners, createOwner, updateOwner, deleteOwner, reorderOwners } = require('../controllers/ownerController');
+const { getOwners, getOwnerImage, createOwner, updateOwner, deleteOwner, reorderOwners } = require('../controllers/ownerController');
 
 router.get('/', getOwners);
+router.get('/:id/image', getOwnerImage);
 router.post('/', auth, upload.single('image'), createOwner);
 router.put('/reorder', auth, reorderOwners);
 router.put('/:id', auth, upload.single('image'), updateOwner);

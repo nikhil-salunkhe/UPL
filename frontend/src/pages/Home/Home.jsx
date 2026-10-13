@@ -4,15 +4,20 @@ import { getOwners } from '../../services/ownerService';
 import { getTournament } from '../../services/tournamentService';
 import { getAdvertisements } from '../../services/advertisementService';
 import { getRules } from '../../services/ruleService';
-import { apiBaseUrl } from '../../services/api';
+import { apiBaseUrl, ownerImageUrl, advertisementImageUrl } from '../../services/api';
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import Hero from '../../components/Hero/Hero';
 import './Home.css';
 
 const getOwnerImageSrc = (owner) => {
-  if (!owner.image) return '';
-  if (owner.image.startsWith('data:') || owner.image.startsWith('http')) return owner.image;
-  return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
+  // The list endpoint no longer embeds the base64 photo (it made the response
+  // ~4 MB and timed out). Load each team logo on demand from its id. Older or
+  // admin responses may still carry an inline data URL / path — honour those.
+  if (owner.image) {
+    if (owner.image.startsWith('data:') || owner.image.startsWith('http')) return owner.image;
+    if (owner.image.startsWith('/')) return `${apiBaseUrl}${owner.image}`;
+  }
+  return owner._id ? ownerImageUrl(owner._id) : '';
 };
 
 const cleanLeaderName = (name) => {
@@ -24,6 +29,40 @@ const cleanLeaderName = (name) => {
   return trimmed;
 };
 
+// Friendly inline error + retry shown for a single home section when its
+// endpoint fails. Keeps the rest of the page usable.
+const SectionError = ({ onRetry, loading }) => (
+  <div className="status-card section-error">
+    <span>Could not load this section right now.</span>
+    <button
+      type="button"
+      className="retry-btn"
+      onClick={onRetry}
+      disabled={loading}
+    >
+      {loading ? 'Retrying...' : 'Retry'}
+    </button>
+  </div>
+);
+
+// Team logo with a graceful fallback: if the on-demand image request 404s
+// (owner has no photo), show the trophy placeholder instead of a broken image.
+const TeamLogo = ({ src, alt }) => {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <span className="team-logo team-logo-fallback">🏆</span>;
+  }
+  return (
+    <img
+      className="team-logo"
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
 const Home = () => {
   const [players, setPlayers] = useState([]);
   const [owners, setOwners] = useState([]);
@@ -32,27 +71,56 @@ const Home = () => {
   const [advertisements, setAdvertisements] = useState([]);
   const [rules, setRules] = useState([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [playersData, ownersData, tournamentData, adsData, rulesData] = await Promise.all([
-          getPlayers(),
-          getOwners(),
-          getTournament(),
-          getAdvertisements(),
-          getRules()
-        ]);
-        setPlayers(playersData);
-        setOwners(ownersData);
-        setTournament(tournamentData);
-        setAdvertisements(adsData || []);
-        setRules(rulesData || []);
-      } catch (error) {
-        console.error('Failed to load home data', error);
-      }
-    };
+  // Per-section loading + error state. Each home section is fetched
+  // independently so a single slow/failing endpoint (e.g. the large /owners
+  // payload or a Render cold start) never hides the other successfully loaded
+  // sections. allSettled guarantees every section resolves on its own.
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState({});
 
+  // Reusable per-section loader. `key` matches a home section; `loader` is the
+  // service call; `onOk` stores the resolved data.
+  const loadSection = async (key, loader, onOk) => {
+    try {
+      const data = await loader();
+      onOk(data);
+      setErrors((prev) => {
+        if (!prev[key]) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } catch (error) {
+      console.error(`Failed to load ${key}`, error);
+      setErrors((prev) => ({ ...prev, [key]: true }));
+    }
+  };
+
+  const fetchData = () => {
+    const sections = [
+      ['players', getPlayers, (d) => setPlayers(d || [])],
+      ['owners', getOwners, (d) => setOwners(d || [])],
+      ['tournament', getTournament, (d) => setTournament(d || null)],
+      ['advertisements', getAdvertisements, (d) => setAdvertisements(d || [])],
+      ['rules', getRules, (d) => setRules(d || [])]
+    ];
+
+    // Each section resolves on its own; only flip the shared loading flag off
+    // in the async .then so we never setState synchronously inside the effect.
+    return Promise.allSettled(
+      sections.map(([key, loader, onOk]) => loadSection(key, loader, onOk))
+    ).then(() => setLoading(false));
+  };
+
+  // Retry is triggered from a click handler, so setting loading here is safe.
+  const retry = () => {
+    setLoading(true);
     fetchData();
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -98,7 +166,14 @@ const Home = () => {
     <div className="home-page">
       <Hero />
 
-      {tournament && (
+      {errors.tournament && !tournament ? (
+        <section className="section tournament-section">
+          <div className="section-heading">
+            <h2>Tournament</h2>
+          </div>
+          <SectionError onRetry={retry} loading={loading} />
+        </section>
+      ) : tournament && (
         <section className="section tournament-section">
           <div className="section-heading">
             <p className="eyebrow">🏆 Tournament Schedule</p>
@@ -178,7 +253,9 @@ const Home = () => {
           <h2>Teams, Owners & Captains</h2>
         </div>
 
-        {owners.length === 0 ? (
+        {errors.owners ? (
+          <SectionError onRetry={retry} loading={loading} />
+        ) : owners.length === 0 ? (
           <div className="status-card">Teams will be announced after the auction.</div>
         ) : (
           <div className="teams-grid">
@@ -194,11 +271,7 @@ const Home = () => {
               return (
                 <article className="team-card" key={owner._id}>
                   <div className="team-card-top">
-                    {ownerImage ? (
-                      <img className="team-logo" src={ownerImage} alt={owner.team || owner.name} />
-                    ) : (
-                      <span className="team-logo team-logo-fallback">🏆</span>
-                    )}
+                    <TeamLogo src={ownerImage} alt={owner.team || owner.name} />
                     <div className="team-card-title">
                       <h3>{owner.team || 'Team TBA'}</h3>
                       <p>Owner: {owner.name}</p>
@@ -235,18 +308,27 @@ const Home = () => {
         </div>
 
         <div className="ads-slider">
-          {advertisements.length === 0 ? (
+          {errors.advertisements ? (
+            <SectionError onRetry={retry} loading={loading} />
+          ) : advertisements.length === 0 ? (
             <div className="no-items">No advertisements published yet.</div>
           ) : (
-            advertisements.map((ad) => (
+            advertisements.map((ad) => {
+              // Banner is loaded on demand from its id (list no longer embeds it).
+              const bannerSrc = ad.banner
+                ? (ad.banner.startsWith('data:') || ad.banner.startsWith('http') || ad.banner.startsWith('/')
+                    ? (ad.banner.startsWith('/') ? `${apiBaseUrl}${ad.banner}` : ad.banner)
+                    : advertisementImageUrl(ad._id))
+                : advertisementImageUrl(ad._id);
+              return (
               <article className="ad-card" key={ad._id}>
-                {ad.banner ? (
+                {bannerSrc ? (
                   <a
                     href={ad.link || '#'}
                     target={ad.link ? '_blank' : undefined}
                     rel={ad.link ? 'noopener noreferrer' : undefined}
                   >
-                    <img src={ad.banner} alt={ad.title || ad.team} loading="lazy" />
+                    <img src={bannerSrc} alt={ad.title || ad.team} loading="lazy" />
                   </a>
                 ) : (
                   <div className="ad-placeholder">No banner</div>
@@ -261,7 +343,8 @@ const Home = () => {
                   )}
                 </div>
               </article>
-            ))
+              );
+            })
           )}
         </div>
       </section>
@@ -272,7 +355,9 @@ const Home = () => {
           <h2>Tournament Rules</h2>
         </div>
 
-        {rules.length === 0 ? (
+        {errors.rules ? (
+          <SectionError onRetry={retry} loading={loading} />
+        ) : rules.length === 0 ? (
           <div className="no-items">No rules published yet.</div>
         ) : (
           <div className="rules-grid">

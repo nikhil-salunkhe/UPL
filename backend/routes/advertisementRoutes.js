@@ -5,12 +5,14 @@ const auth = require('../middleware/auth');
 const {
   getAdvertisements,
   getAllAdvertisements,
+  getAdvertisementImage,
   createAdvertisement,
   updateAdvertisement,
   deleteAdvertisement
 } = require('../controllers/advertisementController');
 
 router.get('/', getAdvertisements);
+router.get('/:id/image', getAdvertisementImage);
 router.get('/all', auth, getAllAdvertisements);
 router.post('/', auth, upload.single('banner'), createAdvertisement);
 router.put('/:id', auth, upload.single('banner'), updateAdvertisement);

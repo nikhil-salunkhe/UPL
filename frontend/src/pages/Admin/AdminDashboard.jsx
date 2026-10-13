@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api, { advertisementImageUrl } from '../../services/api';
 import { approvePlayer, createPlayer, deletePlayer, getAllPlayers, updatePlayer } from '../../services/playerService';
 import { createOwner, deleteOwner, getOwners, reorderOwners, updateOwner } from '../../services/ownerService';
 import { createSponsor, deleteSponsor, getSponsors, updateSponsor } from '../../services/sponsorService';
@@ -173,6 +173,60 @@ const AdminDashboard = () => {
     }
   };
 
+  // Targeted refreshes: after a save/delete only the affected collection is
+  // refetched (loadData() reloads all six and is reserved for the initial
+  // mount) — this keeps every admin action at 1-2 requests instead of 6.
+  const refreshRoster = async () => {
+    try {
+      const body = await getAllPlayers({ page: 1, limit: 1000 });
+      setRoster(Array.isArray(body) ? body : body.data || []);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const refreshPlayers = () => fetchPlayersPage(playerPage, playerStatus);
+
+  const refreshOwners = async () => {
+    try {
+      setOwners(sortOwnersByOrder(await getOwners()));
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Could not refresh owners');
+    }
+  };
+
+  const refreshSponsors = async () => {
+    try {
+      setSponsors(await getSponsors());
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Could not refresh sponsors');
+    }
+  };
+
+  const refreshAds = async () => {
+    try {
+      setAdvertisements(await getAllAdvertisements());
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Could not refresh advertisements');
+    }
+  };
+
+  const refreshRules = async () => {
+    try {
+      setRules(await getAllRules());
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Could not refresh rules');
+    }
+  };
+
+  // Toast messages are informational — clear them so stale status doesn't
+  // linger at the top of the dashboard after the action succeeded.
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(''), 3500);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   const changePlayerPage = (page) => {
     setPlayerPage(page);
     fetchPlayersPage(page, playerStatus);
@@ -279,7 +333,9 @@ const AdminDashboard = () => {
       setMessage('Player saved successfully');
       setPlayerForm(emptyPlayer);
       setEditingPlayerId(null);
-      loadData();
+      // Player name/team feed the captain & vice-captain pickers too.
+      refreshPlayers();
+      refreshRoster();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Unable to save player');
     }
@@ -305,7 +361,7 @@ const AdminDashboard = () => {
       setTournamentData(null);
       setTournamentForm(emptyTournament);
     } catch (error) {
-      setMessage('Failed to delete tournament');
+      setMessage(error.response?.data?.message || 'Failed to delete tournament');
     }
   };
 
@@ -333,7 +389,7 @@ const AdminDashboard = () => {
       setMessage('Match deleted');
       loadMatches();
     } catch (error) {
-      setMessage('Failed to delete match');
+      setMessage(error.response?.data?.message || 'Failed to delete match');
     }
   };
 
@@ -362,7 +418,7 @@ const AdminDashboard = () => {
       setMessage('Owner saved successfully');
       setOwnerForm(emptyOwner);
       setEditingOwnerId(null);
-      loadData();
+      refreshOwners();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Unable to save owner');
     }
@@ -387,7 +443,7 @@ const AdminDashboard = () => {
       setMessage('Sponsor saved successfully');
       setSponsorForm(emptySponsor);
       setEditingSponsorId(null);
-      loadData();
+      refreshSponsors();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Unable to save sponsor');
     }
@@ -418,7 +474,7 @@ const AdminDashboard = () => {
       setMessage(editingAdId ? 'Advertisement updated successfully' : 'Advertisement created successfully');
       setAdForm(emptyAd);
       setEditingAdId(null);
-      loadData();
+      refreshAds();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Unable to save advertisement');
     }
@@ -439,7 +495,7 @@ const AdminDashboard = () => {
       setMessage(editingRuleId ? 'Rule updated successfully' : 'Rule created successfully');
       setRuleForm(emptyRule);
       setEditingRuleId(null);
-      loadData();
+      refreshRules();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Unable to save rule');
     }
@@ -476,7 +532,7 @@ const AdminDashboard = () => {
         setEditingAdId(null);
         setAdForm(emptyAd);
       }
-      loadData();
+      refreshAds();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Failed to delete advertisement');
     }
@@ -503,7 +559,7 @@ const AdminDashboard = () => {
         setEditingRuleId(null);
         setRuleForm(emptyRule);
       }
-      loadData();
+      refreshRules();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Failed to delete rule');
     }
@@ -518,9 +574,20 @@ const AdminDashboard = () => {
       if (type === 'advertisement') await deleteAdvertisement(id);
       if (type === 'rule') await deleteRule(id);
       setMessage(`${type} deleted successfully`);
-      loadData();
+      if (type === 'player') {
+        refreshPlayers();
+        refreshRoster();
+      } else if (type === 'owner') {
+        refreshOwners();
+      } else if (type === 'sponsor') {
+        refreshSponsors();
+      } else if (type === 'advertisement') {
+        refreshAds();
+      } else if (type === 'rule') {
+        refreshRules();
+      }
     } catch (error) {
-      setMessage('Delete failed');
+      setMessage(error.response?.data?.message || 'Delete failed');
     }
   };
 
@@ -549,7 +616,7 @@ const AdminDashboard = () => {
         setMessage(`"${moved.team || moved.name}" moved to #${newIndex + 1} locally — redeploy backend to save it permanently ⚠️`);
       } else {
         setMessage(serverMsg || 'Reorder failed — please retry');
-        loadData();
+        refreshOwners();
       }
     }
   };
@@ -558,7 +625,8 @@ const AdminDashboard = () => {
     try {
       await approvePlayer(id);
       setMessage('Player approved ✅');
-      loadData();
+      // Status changed; the roster (captain pickers) lists everyone.
+      refreshPlayers();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Approval failed');
     }
@@ -569,9 +637,10 @@ const AdminDashboard = () => {
     try {
       await deletePlayer(id);
       setMessage('Registration rejected & removed');
-      loadData();
+      refreshPlayers();
+      refreshRoster();
     } catch (error) {
-      setMessage('Reject failed');
+      setMessage(error.response?.data?.message || 'Reject failed');
     }
   };
 
@@ -599,7 +668,7 @@ const AdminDashboard = () => {
         <button className={activeTab === 'rules' ? 'active' : ''} onClick={() => setActiveTab('rules')}>Rules</button>
         <button className={activeTab === 'tournament' ? 'active' : ''} onClick={() => setActiveTab('tournament')}>Tournament</button>
         <button className={activeTab === 'matches' ? 'active' : ''} onClick={() => setActiveTab('matches')}>Matches</button>
-        <button onClick={handleLogout}>Logout</button>
+        <button className="logout-btn" onClick={handleLogout}>Logout</button>
       </aside>
 
       <main className="dashboard-main">
@@ -634,7 +703,7 @@ const AdminDashboard = () => {
                 <input
                   className="search-input"
                   type="text"
-                  placeholder="Search playersâ€¦"
+                  placeholder="Search players…"
                   value={playerSearch}
                   onChange={(e) => setPlayerSearch(e.target.value)}
                 />
@@ -889,7 +958,16 @@ const AdminDashboard = () => {
               {advertisements.map((ad) => (
                 <div key={ad._id} className="admin-item">
                   <div className="admin-item-prev">
-                    {ad.banner ? <img src={ad.banner} alt={ad.title} /> : <div className="no-image">No banner</div>}
+                    {ad._id ? (
+                      <img
+                        src={advertisementImageUrl(ad._id)}
+                        alt={ad.title}
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="no-image">No banner</div>
+                    )}
                   </div>
                   <div>
                     <strong>{ad.team}</strong>

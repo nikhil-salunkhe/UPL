@@ -11,4 +11,8 @@ const advertisementSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Index to speed up public list queries: filter isActive + sort displayOrder.
+// Created before model compile so MongoDB can build the index on deploy.
+advertisementSchema.index({ isActive: 1, displayOrder: 1 });
+
 module.exports = mongoose.model('Advertisement', advertisementSchema);

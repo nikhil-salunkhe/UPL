@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { getSponsors } from '../../services/sponsorService';
 import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
-import { apiBaseUrl } from '../../services/api';
+import { apiBaseUrl, sponsorImageUrl } from '../../services/api';
 import './Sponsors.css';
 
 const getImageSrc = (sponsor) => {
-  if (!sponsor.logo) {
-    return 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=200&q=80';
+  // The list endpoint no longer embeds the base64 logo. Load each logo on
+  // demand from its id. Honour any inline data URL / path from older responses.
+  if (sponsor.logo) {
+    if (sponsor.logo.startsWith('data:') || sponsor.logo.startsWith('http')) {
+      return sponsor.logo;
+    }
+    if (sponsor.logo.startsWith('/')) {
+      return `${apiBaseUrl}${sponsor.logo}`;
+    }
   }
-  if (sponsor.logo.startsWith('data:') || sponsor.logo.startsWith('http')) {
-    return sponsor.logo;
-  }
-  return `${apiBaseUrl}${sponsor.logo.startsWith('/') ? sponsor.logo : `/${sponsor.logo}`}`;
+  return sponsor._id ? sponsorImageUrl(sponsor._id) : '';
 };
 
 const Sponsors = () => {

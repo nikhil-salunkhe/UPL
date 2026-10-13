@@ -15,6 +15,15 @@ export const apiBaseUrl = rawBaseUrl.replace(/\/api$/, '');
 // Single photos are served on demand (list responses exclude them).
 export const playerImageUrl = (id) => (id ? `${apiBaseUrl}/api/players/${id}/image` : '');
 
+// Owner/team logos are served on demand for the same reason as player photos.
+export const ownerImageUrl = (id) => (id ? `${apiBaseUrl}/api/owners/${id}/image` : '');
+
+// Sponsor logos are served on demand for the same reason.
+export const sponsorImageUrl = (id) => (id ? `${apiBaseUrl}/api/sponsors/${id}/image` : '');
+
+// Advertisement banners are served on demand for the same reason.
+export const advertisementImageUrl = (id) => (id ? `${apiBaseUrl}/api/advertisements/${id}/image` : '');
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('adminToken');
   if (token) {

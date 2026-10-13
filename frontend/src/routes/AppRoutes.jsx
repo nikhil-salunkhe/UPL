@@ -9,24 +9,32 @@ import Matches from '../pages/Matches/Matches';
 import AdminLogin from '../pages/Admin/AdminLogin';
 import AdminDashboard from '../pages/Admin/AdminDashboard';
 
-const AppRoutes = () => {
-  const location = useLocation();
-  const [loading, setLoading] = useState(false);
+// Shows briefly on mount and on every route change (key remounts it).
+// Kept as its own component so no setState happens synchronously inside an effect.
+const PageLoader = () => {
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    const timer = window.setTimeout(() => setLoading(false), 450);
+    const timer = window.setTimeout(() => setVisible(false), 450);
     return () => window.clearTimeout(timer);
-  }, [location.pathname]);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="page-loader">
+      <div className="loader-ring" />
+      <p>Loading tournament portal...</p>
+    </div>
+  );
+};
+
+const AppRoutes = () => {
+  const location = useLocation();
 
   return (
     <>
-      {loading && (
-        <div className="page-loader">
-          <div className="loader-ring" />
-          <p>Loading tournament portal...</p>
-        </div>
-      )}
+      <PageLoader key={location.pathname} />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/players" element={<Players />} />

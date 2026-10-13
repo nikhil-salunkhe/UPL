@@ -39,7 +39,10 @@ exports.getRules = async (req, res) => {
         .sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0));
       return res.json(rules);
     }
+    const start = process.hrtime.bigint();
     const rules = await Rule.find({ isActive: true }).sort({ displayOrder: 1, createdAt: -1 });
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(`[api-timing] GET /rules: ${durationMs.toFixed(0)}ms`);
     res.json(rules);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch rules', error: error.message });
@@ -52,7 +55,10 @@ exports.getAllRules = async (req, res) => {
     if (!isMongoConnected()) {
       return res.json([...getRulesStore()].sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0)));
     }
+    const start = process.hrtime.bigint();
     const rules = await Rule.find().sort({ displayOrder: 1, createdAt: -1 });
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(`[api-timing] GET /rules/all: ${durationMs.toFixed(0)}ms`);
     res.json(rules);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch rules', error: error.message });

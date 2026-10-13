@@ -31,11 +31,15 @@ exports.getOwners = async (req, res) => {
   try {
     // Read-time guard: older records may have an image data URL saved in
     // captain/viceCaptain — never send that to the client as a "name".
+    // Owner photos (`image`) are base64 data URLs stored inline; embedding them
+    // made this list ~4 MB / ~50s and blew the client timeout. Project the
+    // photo out — the UI loads each logo on demand from GET /owners/:id/image.
     const clean = (list) => list.map((o) => {
       const obj = o && typeof o.toObject === 'function' ? o.toObject() : { ...o };
       obj.captain = sanitizeLeaderName(obj.captain);
       obj.viceCaptain = sanitizeLeaderName(obj.viceCaptain);
       if (obj.displayOrder === undefined || obj.displayOrder === null) obj.displayOrder = 0;
+      delete obj.image;
       return obj;
     });
     const sortByOrder = (list) => [...list].sort(
@@ -44,10 +48,59 @@ exports.getOwners = async (req, res) => {
     if (!isMongoConnected()) {
       return res.json(sortByOrder(clean(getStoreOwners())));
     }
-    const owners = await Owner.find().sort({ displayOrder: 1, createdAt: 1 });
+    const start = process.hrtime.bigint();
+    const owners = await Owner.find().sort({ displayOrder: 1, createdAt: 1 }).select('-image').lean();
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(`[api-timing] GET /owners: ${durationMs.toFixed(0)}ms`);
     res.json(clean(owners));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch owners', error: error.message });
+  }
+};
+
+// Serve a single owner photo on demand (mirrors GET /players/:id/image).
+// List responses exclude the photo to keep the payload small; the Home page
+// requests each team logo individually and caches it in the browser.
+exports.getOwnerImage = async (req, res) => {
+  try {
+    let image = '';
+    if (!isMongoConnected()) {
+      const owner = getStoreOwners().find((o) => String(o._id) === String(req.params.id));
+      if (!owner) {
+        return res.status(404).json({ message: 'Owner not found' });
+      }
+      image = owner.image || '';
+    } else {
+      const owner = await Owner.findById(req.params.id).select('image').lean();
+      if (!owner) {
+        return res.status(404).json({ message: 'Owner not found' });
+      }
+      image = owner.image || '';
+    }
+
+    if (!image) {
+      res.set('Cache-Control', 'public, max-age=60');
+      return res.status(404).json({ message: 'No image for this owner' });
+    }
+
+    // Data URL stored by imageHelper.fileToDataUrl → decode back to bytes.
+    const dataUrlMatch = /^data:([^;,]+);base64,(.*)$/s.exec(image);
+    if (dataUrlMatch) {
+      res.set('Cache-Control', 'public, max-age=604800');
+      res.set('Content-Type', dataUrlMatch[1]);
+      return res.send(Buffer.from(dataUrlMatch[2], 'base64'));
+    }
+
+    // Legacy records: absolute http(s) URL, or a /uploads path served by the
+    // static middleware below the API.
+    if (/^https?:\/\//.test(image) || image.startsWith('/')) {
+      return res.redirect(image);
+    }
+
+    res.set('Cache-Control', 'public, max-age=60');
+    return res.status(404).json({ message: 'Unsupported image format' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load owner image', error: error.message });
   }
 };
 

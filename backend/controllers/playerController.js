@@ -22,7 +22,10 @@ exports.getPlayers = async (req, res) => {
       // Public list: only approved players
       return res.json(getStorePlayers().filter(isApproved).map(({ image, ...rest }) => rest));
     }
+    const start = process.hrtime.bigint();
     const players = await Player.find({ status: { $in: ['approved', null] } }).sort({ createdAt: -1 }).select('-image').lean();
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(`[api-timing] GET /players: ${durationMs.toFixed(0)}ms`);
     // Backfill: legacy docs without status still show up
     const legacy = await Player.find({ status: { $exists: false } }).sort({ createdAt: -1 }).select('-image').lean();
     const merged = [...players, ...legacy.filter((p) => !players.some((q) => q._id.equals(p._id)))];

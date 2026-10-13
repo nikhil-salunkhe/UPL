@@ -7,6 +7,8 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const { validationResult } = require('express-validator');
 const Admin = require('./models/Admin');
 
@@ -48,6 +50,63 @@ app.use(
     credentials: true
   })
 );
+
+/* ============================
+   gzip compression
+   Shrinks every JSON/text response (typically 3–5× smaller). Critical on the
+   free Render tier where egress + cold-start latency dominate page load.
+============================ */
+
+app.use(compression());
+
+/* ============================
+   Rate limiting
+   Protects the public write/read endpoints from a single client hammering the
+   database (spam registrations, scraping). Login gets a tighter limit to slow
+   brute-force attempts. Limits are generous for normal village traffic.
+============================ */
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 300, // 300 requests / minute / IP — far above normal browsing
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please slow down.' }
+});
+
+// Apply the general limiter to all API routes. A tighter, brute-force-focused
+// limiter is added directly on the login route in adminRoutes.
+app.use('/api', apiLimiter);
+
+/* ============================
+   Short-lived caching for public read endpoints
+   These collections change rarely during a tournament day. A 30s browser/CDN
+   cache absorbs the "everyone refreshes at once" spike and cuts repeat hits to
+   Mongo + Render cold starts. Admin/mutating routes are never cached.
+============================ */
+
+// Authenticated requests (e.g. /players/all, /rules/all, /advertisements/all)
+// share these path prefixes with their public counterparts. A `public` header
+// on those would let shared caches (CDN/proxy) store admin-only payloads and
+// replay them to anonymous visitors — so admin traffic is explicitly
+// uncacheable, and the Authorization variant is called out via Vary.
+const publicCache = (seconds) => (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (req.headers.authorization) {
+    res.set('Cache-Control', 'no-store');
+    return next();
+  }
+  res.set('Cache-Control', `public, max-age=${seconds}`);
+  res.vary('Authorization');
+  next();
+};
+app.use('/api/players', publicCache(30));
+app.use('/api/owners', publicCache(30));
+app.use('/api/sponsors', publicCache(60));
+app.use('/api/advertisements', publicCache(60));
+app.use('/api/rules', publicCache(60));
+app.use('/api/tournament', publicCache(30));
+app.use('/api/matches', publicCache(15));
 
 /* ============================
    Request logging: method, path, status, duration.

@@ -3,17 +3,22 @@ import { getOwners } from '../../services/ownerService';
 import { getPlayers } from '../../services/playerService';
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import PhotoPreview from '../../components/PhotoPreview/PhotoPreview';
-import { apiBaseUrl } from '../../services/api';
+import { apiBaseUrl, ownerImageUrl } from '../../services/api';
 import './Owners.css';
 
 const getImageSrc = (owner) => {
-  if (!owner.image) {
-    return 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=200&q=80';
+  // The list endpoint no longer embeds the base64 photo (it made the response
+  // ~4 MB and timed out). Load each owner photo on demand from its id. Older or
+  // admin responses may still carry an inline data URL / path — honour those.
+  if (owner.image) {
+    if (owner.image.startsWith('data:') || owner.image.startsWith('http')) {
+      return owner.image;
+    }
+    if (owner.image.startsWith('/')) {
+      return `${apiBaseUrl}${owner.image}`;
+    }
   }
-  if (owner.image.startsWith('data:') || owner.image.startsWith('http')) {
-    return owner.image;
-  }
-  return `${apiBaseUrl}${owner.image.startsWith('/') ? owner.image : `/${owner.image}`}`;
+  return owner._id ? ownerImageUrl(owner._id) : '';
 };
 
 const cleanLeaderName = (name) => {
@@ -102,7 +107,12 @@ const Owners = () => {
                       onClick={() => setPreviewOwner(owner)}
                       aria-label={`View ${owner.name} photo`}
                     >
-                      <img src={getImageSrc(owner)} alt={owner.name} loading="lazy" />
+                      <img
+                        src={getImageSrc(owner)}
+                        alt={owner.name}
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+                      />
                     </button>
                   </td>
                   <td>{owner.name}</td>
