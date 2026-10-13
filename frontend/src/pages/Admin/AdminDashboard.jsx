@@ -507,6 +507,14 @@ const AdminDashboard = () => {
   const handleAdBannerChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Server accepts up to 12MB as a base64 text field (~8.7MB raw image);
+    // anything bigger would be rejected with a cryptic 400, so fail fast here
+    // with a readable message.
+    if (file.size > 8 * 1024 * 1024) {
+      setMessage('Banner image must be smaller than 8MB');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onloadend = () => setAdForm((prev) => ({ ...prev, banner: reader.result }));
     reader.readAsDataURL(file);
