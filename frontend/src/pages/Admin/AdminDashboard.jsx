@@ -4,6 +4,13 @@ import api from '../../services/api';
 import { approvePlayer, createPlayer, deletePlayer, getAllPlayers, updatePlayer } from '../../services/playerService';
 import { createOwner, deleteOwner, getOwners, reorderOwners, updateOwner } from '../../services/ownerService';
 import { createSponsor, deleteSponsor, getSponsors, updateSponsor } from '../../services/sponsorService';
+import {
+  createAdvertisement,
+  deleteAdvertisement,
+  getAllAdvertisements,
+  updateAdvertisement
+} from '../../services/advertisementService';
+import { createRule, deleteRule, getAllRules, updateRule } from '../../services/ruleService';
 import { getTournament, saveTournament } from '../../services/tournamentService';
 import { getMatches, createMatch, updateMatch, deleteMatch } from '../../services/matchService';
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
@@ -12,6 +19,8 @@ import './Admin.css';
 const emptyPlayer = { name: '', role: 'Batsman', team: '', image: '' };
 const emptyOwner = { name: '', phone: '', team: '', captain: '', viceCaptain: '', image: '' };
 const emptySponsor = { companyName: '', sponsoredPrice: '', phone: '', logo: '' };
+const emptyAd = { team: '', title: '', description: '', link: '', banner: '', isActive: true, displayOrder: 0 };
+const emptyRule = { title: '', description: '', category: 'General', isActive: true, displayOrder: 0 };
 const emptyTournament = { auctionDate: '', matchStartDate: '', matchEndDate: '', lotA: 'Lot A', lotB: 'Lot B', lotADay: 1, lotBDay: 2, venue: 'जुगाइदेवी स्टेडियम उरूल' };
 const emptyMatch = { teamA: '', teamB: '', matchDate: '', matchTime: '10:00 AM', lot: 'Lot A', venue: 'जुगाइदेवी स्टेडियम उरूल' };
 // Captain / vice-captain are player NAMES — guard against corrupted records
@@ -47,13 +56,19 @@ const AdminDashboard = () => {
   const [players, setPlayers] = useState([]);
   const [owners, setOwners] = useState([]);
   const [sponsors, setSponsors] = useState([]);
+  const [advertisements, setAdvertisements] = useState([]);
+  const [rules, setRules] = useState([]);
   const [matches, setMatches] = useState([]);
   const [playerForm, setPlayerForm] = useState(emptyPlayer);
   const [ownerForm, setOwnerForm] = useState(emptyOwner);
   const [sponsorForm, setSponsorForm] = useState(emptySponsor);
+  const [adForm, setAdForm] = useState(emptyAd);
+  const [ruleForm, setRuleForm] = useState(emptyRule);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const [editingOwnerId, setEditingOwnerId] = useState(null);
   const [editingSponsorId, setEditingSponsorId] = useState(null);
+  const [editingAdId, setEditingAdId] = useState(null);
+  const [editingRuleId, setEditingRuleId] = useState(null);
   const [tournamentForm, setTournamentForm] = useState(emptyTournament);
   const [tournamentData, setTournamentData] = useState(null);
   const [matchForm, setMatchForm] = useState(emptyMatch);
@@ -120,11 +135,13 @@ const AdminDashboard = () => {
   // independently — one slow or failed request can no longer discard the
   // others (the old Promise.all dropped everything when players timed out).
   const loadData = async () => {
-    const [, ownersResult, sponsorsResult, rosterResult] = await Promise.allSettled([
+    const [, ownersResult, sponsorsResult, rosterResult, adsResult, rulesResult] = await Promise.allSettled([
       fetchPlayersPage(playerPage, playerStatus),
       getOwners(),
       getSponsors(),
-      getAllPlayers({ page: 1, limit: 1000 }) // full list, no photos (~KBs)
+      getAllPlayers({ page: 1, limit: 1000 }), // full list, no photos (~KBs)
+      getAllAdvertisements(),
+      getAllRules()
     ]);
 
     if (ownersResult.status === 'fulfilled') {
@@ -137,11 +154,19 @@ const AdminDashboard = () => {
       const body = rosterResult.value;
       setRoster(Array.isArray(body) ? body : body.data || []);
     }
+    if (adsResult.status === 'fulfilled') {
+      setAdvertisements(adsResult.value);
+    }
+    if (rulesResult.status === 'fulfilled') {
+      setRules(rulesResult.value);
+    }
 
     const failed = [];
     if (ownersResult.status === 'rejected') failed.push('owners');
     if (sponsorsResult.status === 'rejected') failed.push('sponsors');
     if (rosterResult.status === 'rejected') failed.push('player names');
+    if (adsResult.status === 'rejected') failed.push('advertisements');
+    if (rulesResult.status === 'rejected') failed.push('rules');
     // Player-list failures are surfaced inline in the players panel with Retry.
     if (failed.length) {
       setMessage(`Could not load: ${failed.join(', ')}. The rest of the dashboard loaded fine.`);
@@ -368,11 +393,130 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleAdSubmit = async (e) => {
+    e.preventDefault();
+    if (!adForm.team.trim() || !adForm.title.trim()) {
+      setMessage('Team and ad title are required');
+      return;
+    }
+    const payload = new FormData();
+    payload.append('team', adForm.team.trim());
+    payload.append('title', adForm.title.trim());
+    payload.append('description', adForm.description || '');
+    payload.append('link', adForm.link || '');
+    payload.append('isActive', adForm.isActive ? 'true' : 'false');
+    payload.append('displayOrder', String(adForm.displayOrder || 0));
+    if (adForm.banner && typeof adForm.banner !== 'string') {
+      payload.append('banner', adForm.banner);
+    }
+    try {
+      if (editingAdId) {
+        await updateAdvertisement(editingAdId, payload);
+      } else {
+        await createAdvertisement(payload);
+      }
+      setMessage(editingAdId ? 'Advertisement updated successfully' : 'Advertisement created successfully');
+      setAdForm(emptyAd);
+      setEditingAdId(null);
+      loadData();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Unable to save advertisement');
+    }
+  };
+
+  const handleRuleSubmit = async (e) => {
+    e.preventDefault();
+    if (!ruleForm.title.trim() || !ruleForm.description.trim()) {
+      setMessage('Rule title and description are required');
+      return;
+    }
+    try {
+      if (editingRuleId) {
+        await updateRule(editingRuleId, ruleForm);
+      } else {
+        await createRule(ruleForm);
+      }
+      setMessage(editingRuleId ? 'Rule updated successfully' : 'Rule created successfully');
+      setRuleForm(emptyRule);
+      setEditingRuleId(null);
+      loadData();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Unable to save rule');
+    }
+  };
+
+  const handleAdBannerChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setAdForm((prev) => ({ ...prev, banner: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleAdEdit = (ad) => {
+    setAdForm({
+      team: ad.team || '',
+      title: ad.title || '',
+      description: ad.description || '',
+      link: ad.link || '',
+      banner: ad.banner || '',
+      isActive: ad.isActive !== false,
+      displayOrder: ad.displayOrder || 0
+    });
+    setEditingAdId(ad._id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAdDelete = async (id) => {
+    if (!window.confirm('Delete this advertisement?')) return;
+    try {
+      await deleteAdvertisement(id);
+      setMessage('Advertisement deleted successfully');
+      if (editingAdId === id) {
+        setEditingAdId(null);
+        setAdForm(emptyAd);
+      }
+      loadData();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Failed to delete advertisement');
+    }
+  };
+
+  const handleRuleEdit = (rule) => {
+    setRuleForm({
+      title: rule.title || '',
+      description: rule.description || '',
+      category: rule.category || 'General',
+      isActive: rule.isActive !== false,
+      displayOrder: rule.displayOrder || 0
+    });
+    setEditingRuleId(rule._id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRuleDelete = async (id) => {
+    if (!window.confirm('Delete this rule?')) return;
+    try {
+      await deleteRule(id);
+      setMessage('Rule deleted successfully');
+      if (editingRuleId === id) {
+        setEditingRuleId(null);
+        setRuleForm(emptyRule);
+      }
+      loadData();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Failed to delete rule');
+    }
+  };
+
+
   const deleteEntry = async (type, id) => {
     try {
       if (type === 'player') await deletePlayer(id);
       if (type === 'owner') await deleteOwner(id);
       if (type === 'sponsor') await deleteSponsor(id);
+      if (type === 'advertisement') await deleteAdvertisement(id);
+      if (type === 'rule') await deleteRule(id);
       setMessage(`${type} deleted successfully`);
       loadData();
     } catch (error) {
@@ -451,6 +595,8 @@ const AdminDashboard = () => {
         <button className={activeTab === 'players' ? 'active' : ''} onClick={() => setActiveTab('players')}>Players</button>
         <button className={activeTab === 'owners' ? 'active' : ''} onClick={() => setActiveTab('owners')}>Owners</button>
         <button className={activeTab === 'sponsors' ? 'active' : ''} onClick={() => setActiveTab('sponsors')}>Sponsors</button>
+        <button className={activeTab === 'ads' ? 'active' : ''} onClick={() => setActiveTab('ads')}>Team Ads</button>
+        <button className={activeTab === 'rules' ? 'active' : ''} onClick={() => setActiveTab('rules')}>Rules</button>
         <button className={activeTab === 'tournament' ? 'active' : ''} onClick={() => setActiveTab('tournament')}>Tournament</button>
         <button className={activeTab === 'matches' ? 'active' : ''} onClick={() => setActiveTab('matches')}>Matches</button>
         <button onClick={handleLogout}>Logout</button>
@@ -461,6 +607,8 @@ const AdminDashboard = () => {
           <div className="metric-card"><h3>{playerCounts ? playerCounts.all : players.length}</h3><p>Players</p></div>
           <div className="metric-card"><h3>{owners.length}</h3><p>Owners</p></div>
           <div className="metric-card"><h3>{sponsors.length}</h3><p>Sponsors</p></div>
+          <div className="metric-card"><h3>{advertisements.length}</h3><p>Team Ads</p></div>
+          <div className="metric-card"><h3>{rules.length}</h3><p>Rules</p></div>
           <div className="metric-card"><h3>{matches.length}</h3><p>Matches</p></div>
           <div className="metric-card"><h3>{tournamentData ? 'Active' : 'Not Set'}</h3><p>Tournament</p></div>
         </div>
@@ -677,6 +825,144 @@ const AdminDashboard = () => {
                   <div className="admin-actions">
                     <button onClick={() => { setSponsorForm({ ...sponsorForm, ...sponsor, logo: '' }); setEditingSponsorId(sponsor._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('sponsor', sponsor._id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'ads' && (
+          <section className="admin-section">
+            <form className="admin-form" onSubmit={handleAdSubmit}>
+              <h3>{editingAdId ? 'Edit Advertisement' : 'Add Advertisement'}</h3>
+              <input
+                value={adForm.team}
+                onChange={(e) => setAdForm({ ...adForm, team: e.target.value })}
+                placeholder="Team"
+                required
+              />
+              <input
+                value={adForm.title}
+                onChange={(e) => setAdForm({ ...adForm, title: e.target.value })}
+                placeholder="Ad Title"
+                required
+              />
+              <input
+                value={adForm.description}
+                onChange={(e) => setAdForm({ ...adForm, description: e.target.value })}
+                placeholder="Description"
+              />
+              <input
+                value={adForm.link}
+                onChange={(e) => setAdForm({ ...adForm, link: e.target.value })}
+                placeholder="Link (URL)"
+              />
+              <input
+                type="file"
+                onChange={handleAdBannerChange}
+                accept="image/*"
+                placeholder="Upload banner"
+              />
+              <div className="admin-row">
+                <label className="toggle-row">
+                  <span>Active</span>
+                  <input
+                    type="checkbox"
+                    checked={adForm.isActive}
+                    onChange={(e) => setAdForm({ ...adForm, isActive: e.target.checked })}
+                  />
+                </label>
+                <label className="toggle-row">
+                  <span>Display Order</span>
+                  <input
+                    type="number"
+                    value={adForm.displayOrder}
+                    onChange={(e) => setAdForm({ ...adForm, displayOrder: Number(e.target.value) })}
+                    min={0}
+                  />
+                </label>
+              </div>
+              <button type="submit">{editingAdId ? 'Update Advertisement' : 'Save Advertisement'}</button>
+            </form>
+            <div className="admin-list">
+              {advertisements.map((ad) => (
+                <div key={ad._id} className="admin-item">
+                  <div className="admin-item-prev">
+                    {ad.banner ? <img src={ad.banner} alt={ad.title} /> : <div className="no-image">No banner</div>}
+                  </div>
+                  <div>
+                    <strong>{ad.team}</strong>
+                    <p>{ad.title}</p>
+                    <p className="muted">{ad.link}</p>
+                  </div>
+                  <div className="admin-actions">
+                    <button onClick={() => handleAdEdit(ad)}>Edit</button>
+                    <button onClick={() => handleAdDelete(ad._id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'rules' && (
+          <section className="admin-section">
+            <form className="admin-form" onSubmit={handleRuleSubmit}>
+              <h3>{editingRuleId ? 'Edit Rule' : 'Add Rule'}</h3>
+              <input
+                value={ruleForm.title}
+                onChange={(e) => setRuleForm({ ...ruleForm, title: e.target.value })}
+                placeholder="Rule Title"
+                required
+              />
+              <textarea
+                value={ruleForm.description}
+                onChange={(e) => setRuleForm({ ...ruleForm, description: e.target.value })}
+                placeholder="Description"
+                rows={4}
+              />
+              <select
+                value={ruleForm.category}
+                onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
+              >
+                <option value="General">General</option>
+                <option value="Safety">Safety</option>
+                <option value="Policies">Policies</option>
+                <option value="Other">Other</option>
+              </select>
+              <div className="admin-row">
+                <label className="toggle-row">
+                  <span>Active</span>
+                  <input
+                    type="checkbox"
+                    checked={ruleForm.isActive}
+                    onChange={(e) => setRuleForm({ ...ruleForm, isActive: e.target.checked })}
+                  />
+                </label>
+                <label className="toggle-row">
+                  <span>Display Order</span>
+                  <input
+                    type="number"
+                    value={ruleForm.displayOrder}
+                    onChange={(e) => setRuleForm({ ...ruleForm, displayOrder: Number(e.target.value) })}
+                    min={0}
+                  />
+                </label>
+              </div>
+              <button type="submit">{editingRuleId ? 'Update Rule' : 'Save Rule'}</button>
+            </form>
+            <div className="admin-list">
+              {rules.map((rule) => (
+                <div key={rule._id} className="admin-item">
+                  <div className="admin-item-prev">
+                    <span className="rule-category">{rule.category}</span>
+                    <strong>{rule.title}</strong>
+                    <p>{rule.description}</p>
+                  </div>
+                  <div className="admin-actions">
+                    <button onClick={() => handleRuleEdit(rule)}>Edit</button>
+                    <button onClick={() => handleRuleDelete(rule._id)}>Delete</button>
                   </div>
                 </div>
               ))}

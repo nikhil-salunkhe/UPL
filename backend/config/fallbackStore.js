@@ -9,6 +9,8 @@ const initialState = {
   players: [],
   owners: [],
   sponsors: [],
+  advertisements: [],
+  rules: [],
   tournament: null,
   matches: []
 };
@@ -259,7 +261,9 @@ function deleteMatch(id) {
 }
 
 module.exports = {
+  createSampleId,
   initStore,
+  createSampleId,
   isMongoConnected,
   getState,
   getPlayers,

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { getPlayers } from '../../services/playerService';
 import { getOwners } from '../../services/ownerService';
 import { getTournament } from '../../services/tournamentService';
+import { getAdvertisements } from '../../services/advertisementService';
+import { getRules } from '../../services/ruleService';
 import { apiBaseUrl } from '../../services/api';
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import Hero from '../../components/Hero/Hero';
@@ -27,16 +29,24 @@ const Home = () => {
   const [owners, setOwners] = useState([]);
   const [tournament, setTournament] = useState(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [advertisements, setAdvertisements] = useState([]);
+  const [rules, setRules] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [playersData, ownersData, tournamentData] = await Promise.all([
-          getPlayers(), getOwners(), getTournament()
+        const [playersData, ownersData, tournamentData, adsData, rulesData] = await Promise.all([
+          getPlayers(),
+          getOwners(),
+          getTournament(),
+          getAdvertisements(),
+          getRules()
         ]);
         setPlayers(playersData);
         setOwners(ownersData);
         setTournament(tournamentData);
+        setAdvertisements(adsData || []);
+        setRules(rulesData || []);
       } catch (error) {
         console.error('Failed to load home data', error);
       }
@@ -217,6 +227,67 @@ const Home = () => {
           </div>
         )}
       </section>
+
+      <section className="section ads-section">
+        <div className="section-heading">
+          <p className="eyebrow">📢 Advertisements</p>
+          <h2>Team Advertisements</h2>
+        </div>
+
+        <div className="ads-slider">
+          {advertisements.length === 0 ? (
+            <div className="no-items">No advertisements published yet.</div>
+          ) : (
+            advertisements.map((ad) => (
+              <article className="ad-card" key={ad._id}>
+                {ad.banner ? (
+                  <a
+                    href={ad.link || '#'}
+                    target={ad.link ? '_blank' : undefined}
+                    rel={ad.link ? 'noopener noreferrer' : undefined}
+                  >
+                    <img src={ad.banner} alt={ad.title || ad.team} loading="lazy" />
+                  </a>
+                ) : (
+                  <div className="ad-placeholder">No banner</div>
+                )}
+                <div className="ad-card-body">
+                  <strong>{ad.team || 'Untitled'}</strong>
+                  <p>{ad.title || 'No title'}</p>
+                  {ad.link && (
+                    <a href={ad.link} target="_blank" rel="noopener noreferrer">
+                      Visit link →
+                    </a>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="section rules-section">
+        <div className="section-heading">
+          <p className="eyebrow">📜 Rules</p>
+          <h2>Tournament Rules</h2>
+        </div>
+
+        {rules.length === 0 ? (
+          <div className="no-items">No rules published yet.</div>
+        ) : (
+          <div className="rules-grid">
+            {rules.map((rule) => (
+              <div className="rule-card" key={rule._id}>
+                <span className="rule-category">{rule.category}</span>
+                <h3>{rule.title}</h3>
+                <p>{rule.description}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+
     </div>
   );
 };
