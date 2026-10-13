@@ -63,6 +63,17 @@ const TeamLogo = ({ src, alt }) => {
   );
 };
 
+// Ad banner with the same fallback as TeamLogo: if the on-demand image request
+// fails (banner missing/empty on the server), show the styled placeholder
+// instead of a permanently broken image icon.
+const AdBanner = ({ src, alt }) => {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <div className="ad-placeholder">No banner</div>;
+  }
+  return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
+};
+
 const Home = () => {
   const [players, setPlayers] = useState([]);
   const [owners, setOwners] = useState([]);
@@ -328,7 +339,7 @@ const Home = () => {
                     target={ad.link ? '_blank' : undefined}
                     rel={ad.link ? 'noopener noreferrer' : undefined}
                   >
-                    <img src={bannerSrc} alt={ad.title || ad.team} loading="lazy" />
+                    <AdBanner src={bannerSrc} alt={ad.title || ad.team} />
                   </a>
                 ) : (
                   <div className="ad-placeholder">No banner</div>

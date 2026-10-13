@@ -462,7 +462,10 @@ const AdminDashboard = () => {
     payload.append('link', adForm.link || '');
     payload.append('isActive', adForm.isActive ? 'true' : 'false');
     payload.append('displayOrder', String(adForm.displayOrder || 0));
-    if (adForm.banner && typeof adForm.banner !== 'string') {
+    // Send the banner whether it is a File or the base64 data URL produced by
+    // handleAdBannerChange. It used to be skipped whenever it was a string, so
+    // ads were saved without any image (broken banner on Home).
+    if (adForm.banner) {
       payload.append('banner', adForm.banner);
     }
     try {

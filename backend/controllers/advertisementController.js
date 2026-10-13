@@ -125,7 +125,11 @@ exports.createAdvertisement = async (req, res) => {
       title: String(title).trim(),
       description: (description || '').trim(),
       link: (link || '').trim(),
-      banner: fileToDataUrl(req.file),
+      // Accept either an uploaded file (multer) or a base64 data-URL body
+      // field — the dashboard's FileReader flow sends the latter. This used to
+      // read only req.file, so banner was silently stored as '' and
+      // GET /advertisements/:id/image answered 404 (broken image on Home).
+      banner: resolveImageInput(req.body.banner, req.file) || '',
       isActive: isActive === undefined ? true : isActive === true || isActive === 'true',
       displayOrder: Number(displayOrder) || 0
     };
