@@ -34,6 +34,7 @@ if (!fs.existsSync(uploadDir)) {
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'https://upl2026.netlify.app',
   process.env.CLIENT_URL
 ];
