@@ -18,6 +18,9 @@ export const playerImageUrl = (id) => (id ? `${apiBaseUrl}/api/players/${id}/ima
 // Owner/team logos are served on demand for the same reason as player photos.
 export const ownerImageUrl = (id) => (id ? `${apiBaseUrl}/api/owners/${id}/image` : '');
 
+// Team logos are served on demand.
+export const teamImageUrl = (id) => (id ? `${apiBaseUrl}/api/teams/${id}/image` : '');
+
 // Sponsor logos are served on demand for the same reason.
 export const sponsorImageUrl = (id) => (id ? `${apiBaseUrl}/api/sponsors/${id}/image` : '');
 

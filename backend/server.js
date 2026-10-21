@@ -156,6 +156,7 @@ app.use('/api/players', require('./routes/playerRoutes'));
 app.use('/api/owners', require('./routes/ownerRoutes'));
 app.use('/api/sponsors', require('./routes/sponsorRoutes'));
 app.use('/api/advertisements', require('./routes/advertisementRoutes'));
+app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/rules', require('./routes/ruleRoutes'));
 app.use('/api/tournament', require('./routes/tournamentRoutes'));
 app.use('/api/matches', require('./routes/matchRoutes'));

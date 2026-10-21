@@ -4,6 +4,8 @@ import Home from '../pages/Home/Home';
 import Players from '../pages/Players/Players';
 import PlayerRegister from '../pages/Register/PlayerRegister';
 import Owners from '../pages/Owners/Owners';
+import Teams from '../pages/Teams/Teams';
+import TeamDetail from '../pages/Teams/TeamDetail';
 import Sponsors from '../pages/Sponsors/Sponsors';
 import Matches from '../pages/Matches/Matches';
 import AdminLogin from '../pages/Admin/AdminLogin';
@@ -40,6 +42,8 @@ const AppRoutes = () => {
         <Route path="/players" element={<Players />} />
         <Route path="/register" element={<PlayerRegister />} />
         <Route path="/owners" element={<Owners />} />
+        <Route path="/teams" element={<Teams />} />
+        <Route path="/teams/:id" element={<TeamDetail />} />
         <Route path="/sponsors" element={<Sponsors />} />
         <Route path="/matches" element={<Matches />} />
 

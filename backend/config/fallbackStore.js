@@ -8,6 +8,7 @@ const initialState = {
   admin: null,
   players: [],
   owners: [],
+  teams: [],
   sponsors: [],
   advertisements: [],
   rules: [],
@@ -260,6 +261,32 @@ function deleteMatch(id) {
   return true;
 }
 
+function getTeams() {
+  return getState().teams;
+}
+
+function createTeam(payload) {
+  const team = { _id: createSampleId('team'), ...payload, players: payload.players || [] };
+  getState().teams.unshift(team);
+  return team;
+}
+
+function updateTeam(id, payload) {
+  const teams = getState().teams;
+  const index = teams.findIndex((t) => t._id === id || t._id?.toString() === id);
+  if (index === -1) return null;
+  teams[index] = { ...teams[index], ...payload };
+  return teams[index];
+}
+
+function deleteTeam(id) {
+  const teams = getState().teams;
+  const index = teams.findIndex((t) => t._id === id || t._id?.toString() === id);
+  if (index === -1) return false;
+  teams.splice(index, 1);
+  return true;
+}
+
 module.exports = {
   createSampleId,
   initStore,
@@ -275,6 +302,10 @@ module.exports = {
   updateOwner,
   deleteOwner,
   reorderOwners,
+  getTeams,
+  createTeam,
+  updateTeam,
+  deleteTeam,
   getSponsors,
   createSponsor,
   updateSponsor,
