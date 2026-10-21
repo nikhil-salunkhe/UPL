@@ -12,6 +12,13 @@
   padding: 1rem 0 2rem;
 }
 
+/* Admin shell: full width, no public navbar/footer — dashboard owns the layout */
+.app-shell.admin-shell .main-content.admin-main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 @media (max-width: 900px) {
   .main-content {
     padding: 0.8rem 0 1.5rem;
