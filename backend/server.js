@@ -5,11 +5,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
-const multer = require('multer');
-const jwt = require('jsonwebtoken');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { validationResult } = require('express-validator');
 const Admin = require('./models/Admin');
 
 dotenv.config();
@@ -167,22 +164,14 @@ app.use('/api', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });
 });
 
-// Turn multer upload errors (file too large / not an image) into clean JSON
-// responses. The public registration form otherwise receives an HTML 500
-// plus a generic failure message — exactly what users see when their first
-// submit 'fails' on a slow connection (the timeout kills the response, but
-// the server still saved the player). The client retry now returns the
-// original record instead of creating a duplicate pending player.
-app.use((err, req, res, next) => {
-  if (res.headersSent) {
-    return next(err);
-  }
-  if (err instanceof multer.MulterError || err.message === 'Only image files are allowed') {
-    return res.status(400).json({ message: err.message });
-  }
-  console.error('Unexpected server error:', err);
-  res.status(500).json({ message: 'Registration failed. Please try again.' });
-});
+// Turn multer upload errors (file too large / not an image) and body-parser
+// errors (malformed JSON / oversized body) into clean JSON responses. The
+// public registration form otherwise receives an HTML 500 plus a generic
+// failure message — exactly what users see when their first submit 'fails'
+// on a slow connection (the timeout kills the response, but the server still
+// saved the player). The client retry now returns the original record instead
+// of creating a duplicate pending player.
+app.use(require('./middleware/errorHandler'));
 
 /* ============================
    MongoDB Connection
