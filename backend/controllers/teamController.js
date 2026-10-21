@@ -58,6 +58,10 @@ exports.getTeams = async (req, res) => {
       data: teams,
       pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch teams', error: error.message });
+  }
+};
 
 // PUBLIC: team logo served on demand
 exports.getTeamImage = async (req, res) => {
