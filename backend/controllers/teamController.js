@@ -63,6 +63,44 @@ exports.getTeams = async (req, res) => {
   }
 };
 
+// PUBLIC: single team with its players (players' photos loaded on demand)
+exports.getTeam = async (req, res) => {
+  try {
+    let team;
+    if (!isMongoConnected()) {
+      team = getTeams().find((t) => String(t._id) === String(req.params.id));
+      if (!team) return res.status(404).json({ message: 'Team not found' });
+    } else {
+      team = await Team.findById(req.params.id).lean();
+      if (!team) return res.status(404).json({ message: 'Team not found' });
+    }
+
+    const playerIds = (team.players || []).map((p) => p.player).filter(Boolean);
+    let players = [];
+    if (playerIds.length > 0) {
+      if (!isMongoConnected()) {
+        const state = getState();
+        players = state.players.filter((p) => playerIds.includes(String(p._id))).map(({ image, ...rest }) => rest);
+      } else {
+        players = await Player.find({ _id: { $in: playerIds } }).select('-image').lean();
+      }
+    }
+
+    const playerMap = new Map(players.map((p) => [String(p._id), p]));
+    const orderedPlayers = (team.players || [])
+      .map((tp) => playerMap.get(String(tp.player)))
+      .filter(Boolean);
+
+    res.json({
+      ...team,
+      players: orderedPlayers,
+      logo: team.logo || ''
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch team', error: error.message });
+  }
+};
+
 // PUBLIC: team logo served on demand
 exports.getTeamImage = async (req, res) => {
   try {
