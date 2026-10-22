@@ -17,7 +17,7 @@ import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import './Admin.css';
 
 const emptyPlayer = { name: '', role: 'Batsman', team: '', image: '' };
-const emptyOwner = { name: '', phone: '', team: '', captain: '', viceCaptain: '', image: '' };
+const emptyOwner = { name: '', phone: '', team: '', captain: '', viceCaptain: '', players: [], image: '' };
 const emptySponsor = { companyName: '', sponsoredPrice: '', phone: '', logo: '' };
 const emptyAd = { team: '', title: '', description: '', link: '', banner: '', isActive: true, displayOrder: 0 };
 const emptyRule = { title: '', description: '', category: 'General', isActive: true, displayOrder: 0 };
@@ -81,6 +81,8 @@ const AdminDashboard = () => {
   const [playersLoading, setPlayersLoading] = useState(false);
   const [playersError, setPlayersError] = useState('');
   const [roster, setRoster] = useState([]); // full lightweight player list for captain/VC pickers
+  const [squadPlayerToAdd, setSquadPlayerToAdd] = useState(''); // player picked in the "Add Player" select
+  const [squadPlayerSearch, setSquadPlayerSearch] = useState(''); // search filter for the player select
   const didInitRef = useRef(false);
 
   // Player search box state (client-side filter over the current page).
@@ -219,6 +221,13 @@ const AdminDashboard = () => {
     }
   };
 
+  // Teams tab: the owner picker drives which team's roster is managed. The
+  // list comes from GET /teams/owner/:ownerId (empty state when no owner is
+  // picked yet). Legacy team-player management page removed; team rows open
+  // the team detail page.
+
+
+
   // Toast messages are informational — clear them so stale status doesn't
   // linger at the top of the dashboard after the action succeeded.
   useEffect(() => {
@@ -307,6 +316,7 @@ const AdminDashboard = () => {
     loadData();
     loadTournament();
     loadMatches();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const handleLogout = () => {
@@ -393,6 +403,41 @@ const AdminDashboard = () => {
     }
   };
 
+  // --- squad (team players) management -------------------------------------
+
+  const squadNames = Array.isArray(ownerForm.players) ? ownerForm.players : [];
+
+  // Adding a player keeps the already selected captain and vice captain: they
+  // are re-added to the squad if they happen to be missing from it.
+  const addPlayerToSquad = (name) => {
+    const playerName = cleanLeaderName(name);
+    if (!playerName) return;
+    setOwnerForm((prev) => {
+      const current = Array.isArray(prev.players) ? prev.players : [];
+      if (current.includes(playerName)) return prev;
+      const next = [...current, playerName];
+      const captain = cleanLeaderName(prev.captain);
+      const viceCaptain = cleanLeaderName(prev.viceCaptain);
+      if (captain && !next.includes(captain)) next.push(captain);
+      if (viceCaptain && !next.includes(viceCaptain)) next.push(viceCaptain);
+      return { ...prev, players: next };
+    });
+    setSquadPlayerToAdd('');
+    setSquadPlayerSearch('');
+  };
+
+  const removePlayerFromSquad = (name) => {
+    setOwnerForm((prev) => {
+      const current = Array.isArray(prev.players) ? prev.players : [];
+      const next = { ...prev, players: current.filter((p) => p !== name) };
+      // Removing the captain / vice captain clears that role as well, otherwise
+      // the backend would put the leader straight back into the squad.
+      if (cleanLeaderName(next.captain) === name) next.captain = '';
+      if (cleanLeaderName(next.viceCaptain) === name) next.viceCaptain = '';
+      return next;
+    });
+  };
+
   const handleOwnerSubmit = async (e) => {
     e.preventDefault();
     const captain = ownerForm.captain.trim();
@@ -405,6 +450,9 @@ const AdminDashboard = () => {
     Object.entries(ownerForm).forEach(([key, value]) => {
       if (key === 'image') {
         if (value) payload.append('image', value);
+      } else if (key === 'players') {
+        // The squad is an array - send it as JSON so the backend can rebuild it.
+        payload.append('players', JSON.stringify(Array.isArray(value) ? value : []));
       } else {
         payload.append(key, value);
       }
@@ -665,8 +713,8 @@ const AdminDashboard = () => {
   // Get unique team names from registered owners (filter out empty/auction pending)
   const registeredTeams = [...new Set(owners.map(o => o.team).filter(t => t && t !== 'Auction Pending'))];
 
-  const selectedCaptain = roster.find((player) => player.name === cleanLeaderName(ownerForm.captain));
-  const selectedViceCaptain = roster.find((player) => player.name === cleanLeaderName(ownerForm.viceCaptain));
+  const selectedCaptain = roster.find((player) => player._id === ownerForm.captain);
+  const selectedViceCaptain = roster.find((player) => player._id === ownerForm.viceCaptain);
 
   return (
     <div className="admin-dashboard">
@@ -795,7 +843,7 @@ const AdminDashboard = () => {
               <select value={ownerForm.captain} onChange={(e) => setOwnerForm({ ...ownerForm, captain: e.target.value })}>
                 <option value="">-- Select Captain --</option>
                 {roster.map((player) => (
-                  <option key={player._id} value={player.name} disabled={player.name === ownerForm.viceCaptain}>
+                  <option key={player._id} value={player._id} disabled={player._id === ownerForm.viceCaptain}>
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
                 ))}
@@ -807,7 +855,7 @@ const AdminDashboard = () => {
               <select value={ownerForm.viceCaptain} onChange={(e) => setOwnerForm({ ...ownerForm, viceCaptain: e.target.value })}>
                 <option value="">-- Select Vice Captain --</option>
                 {roster.map((player) => (
-                  <option key={player._id} value={player.name} disabled={player.name === ownerForm.captain}>
+                  <option key={player._id} value={player._id} disabled={player._id === ownerForm.captain}>
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
                 ))}
@@ -815,6 +863,76 @@ const AdminDashboard = () => {
                   <option value={cleanLeaderName(ownerForm.viceCaptain)}>{cleanLeaderName(ownerForm.viceCaptain)}</option>
                 )}
               </select>
+              <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Add Player (team squad)</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Search player…"
+                  value={squadPlayerSearch}
+                  onChange={(e) => setSquadPlayerSearch(e.target.value)}
+                  style={{ flex: '1 1 12rem', minWidth: '10rem' }}
+                />
+                <select
+                  value={squadPlayerToAdd}
+                  onChange={(e) => setSquadPlayerToAdd(e.target.value)}
+                  style={{ flex: '1 1 12rem', minWidth: '10rem' }}
+                >
+                  <option value="">-- Select Player to Add --</option>
+                  {roster
+                    .filter((player) => !squadNames.includes(player._id))
+                    .filter((player) => player.name.toLowerCase().includes(squadPlayerSearch.trim().toLowerCase()))
+                    .map((player) => (
+                      <option key={player._id} value={player._id}>
+                        {player.name}{player.team ? ` — ${player.team}` : ''}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => addPlayerToSquad(squadPlayerToAdd)}
+                  disabled={!squadPlayerToAdd || squadNames.includes(squadPlayerToAdd)}
+                >
+                  Add Player
+                </button>
+              </div>
+              {squadNames.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {squadNames.map((playerId) => {
+                    const player = roster.find((p) => String(p._id) === String(playerId));
+                    const isCaptain = playerId === ownerForm.captain;
+                    const isViceCaptain = playerId === ownerForm.viceCaptain;
+                    return (
+                      <div
+                        key={playerId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: '2rem',
+                          padding: '0.25rem 0.6rem 0.25rem 0.3rem',
+                        }}
+                      >
+                        <PlayerAvatar player={player} name={player?.name || String(playerId)} size={26} />
+                        <span style={{ fontSize: '0.85rem', color: '#eaf4ff' }}>
+                          {isCaptain && <strong style={{ color: '#ffd96f' }}>C: </strong>}
+                          {isViceCaptain && <strong style={{ color: '#ffd96f' }}>VC: </strong>}
+                          {player?.name || String(playerId)}
+                        </span>
+                        <button
+                          type="button"
+                          title={isCaptain || isViceCaptain ? 'Remove (leader will be cleared on save)' : 'Remove'}
+                          onClick={() => removePlayerFromSquad(playerId)}
+                          style={{ background: 'transparent', border: 'none', color: '#ff9b9b', cursor: 'pointer', fontSize: '1rem', padding: '0 0.2rem' }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               {roster.length === 0 && (
                 <p style={{ fontSize: '0.8rem', color: '#ffd96f' }}>No players added yet — add players first to select captain &amp; vice captain.</p>
               )}
@@ -876,7 +994,7 @@ const AdminDashboard = () => {
                       title="Move down (show later on Home)"
                       style={{ minWidth: '44px', fontSize: '1.05rem', opacity: index === owners.length - 1 ? 0.4 : 1 }}
                     >↓ Down</button>
-                    <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, captain: cleanLeaderName(owner.captain), viceCaptain: cleanLeaderName(owner.viceCaptain), image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
+                    <button onClick={() => { setOwnerForm({ ...emptyOwner, ...owner, captain: owner.captain || '', viceCaptain: owner.viceCaptain || '', players: Array.isArray(owner.players) ? owner.players : [], image: '' }); setEditingOwnerId(owner._id); }}>Edit</button>
                     <button onClick={() => deleteEntry('owner', owner._id)}>Delete</button>
                   </div>
                 </div>

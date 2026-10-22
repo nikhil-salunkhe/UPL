@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 const Player = require('../models/Player');
 const { isMongoConnected, getPlayers: getStorePlayers, createPlayer: createStorePlayer, updatePlayer: updateStorePlayer, deletePlayer: deleteStorePlayer } = require('../config/fallbackStore');
 const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
+const { removePlayerFromAuctions, renamePlayerReferences } = require('../utils/auctionService');
 const { createdAtWithinWindow, isRecentDuplicatePlayer } = require('../utils/registrationGuard');
-const { parsePagination, statusFilter, matchesStatus, countByStatus } = require('../utils/queryHelper');
+const { parsePagination, statusFilter, matchesStatus, countByStatus, searchFilter, matchesSearch, matchesAddedAfter, escapeRegex, addedAfterFilter } = require('../utils/queryHelper');
 
 const parseAge = (value) => {
   if (value === undefined || value === null || value === '') return null;
@@ -35,6 +36,49 @@ exports.getPlayers = async (req, res) => {
   }
 };
 
+// PUBLIC: search players by name and/or role
+exports.getPlayersSearch = async (req, res) => {
+  try {
+    const { name, role } = req.query;
+    const addedAfter = typeof req.query.addedAfter === 'string' ? req.query.addedAfter : '';
+
+    if (!isMongoConnected()) {
+      const all = getStorePlayers().map(({ image, ...rest }) => rest);
+      let results = all;
+      if (name) {
+        results = results.filter((p) =>
+          String(p.name || '').toLowerCase().includes(String(name).toLowerCase())
+        );
+      }
+      if (role) {
+        results = results.filter((p) => p.role && String(p.role).toLowerCase().includes(String(role).toLowerCase()));
+      }
+      // "Added after" date filter (players are listed newest-first by default).
+      if (addedAfter) {
+        results = results.filter((p) => matchesAddedAfter(p, addedAfter));
+      }
+      return res.json(results);
+    }
+
+    // Escaped so a user-supplied term can never alter (or break) the regex.
+    const filter = {};
+    if (name) {
+      filter.name = new RegExp(escapeRegex(name), 'i');
+    }
+    if (role) {
+      filter.role = new RegExp(escapeRegex(role), 'i');
+    }
+
+    const start = process.hrtime.bigint();
+    const players = await Player.find(filter).sort({ createdAt: -1 }).select('-image').lean();
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(`[api-timing] GET /players/search: ${durationMs.toFixed(0)}ms`);
+    res.json(players);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to search players', error: error.message });
+  }
+};
+
 // Admin-only list.
 // - With ?page / ?limit / ?status → paginated envelope:
 //     { success, data, pagination: { page, limit, total, totalPages }, counts }
@@ -44,7 +88,16 @@ exports.getPlayers = async (req, res) => {
 // 23.5 MB / 15.4s in production and the 10s client timeout always fired.
 exports.getAllPlayers = async (req, res) => {
   try {
-    const usePagination = ['page', 'limit', 'status'].some((key) => key in req.query);
+    const usePagination = ['page', 'limit', 'status', 'search', 'exclude'].some((key) => key in req.query);
+    const searchTerm = typeof req.query.search === 'string' ? req.query.search : '';
+    const addedAfter = typeof req.query.addedAfter === 'string' ? req.query.addedAfter : '';
+    // `?exclude=id1,id2` drops the given players from the list. The roster
+    // picker uses it to hide the players who are already on the team *before*
+    // pagination — filtering afterwards would leave empty pages behind.
+    const excludeIds = (typeof req.query.exclude === 'string' ? req.query.exclude : '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
 
     if (!isMongoConnected()) {
       const all = getStorePlayers().map(({ image, ...rest }) => rest);
@@ -55,7 +108,11 @@ exports.getAllPlayers = async (req, res) => {
       if (parsed.error) {
         return res.status(400).json({ message: parsed.error });
       }
-      const filtered = all.filter((player) => matchesStatus(player, parsed.status));
+      const searched = all.filter((player) => matchesSearch(player, searchTerm));
+      const filtered = searched
+        .filter((player) => matchesStatus(player, parsed.status))
+        .filter((player) => matchesAddedAfter(player, addedAfter))
+        .filter((player) => !excludeIds.includes(String(player._id)));
       const counts = countByStatus(getStorePlayers());
       return res.json({
         success: true,
@@ -80,7 +137,23 @@ exports.getAllPlayers = async (req, res) => {
       return res.status(400).json({ message: parsed.error });
     }
 
-    const filter = statusFilter(parsed.status);
+    const filter = { ...statusFilter(parsed.status), ...searchFilter(searchTerm) };
+
+    // "Added after" date filter (players are listed newest-first by default).
+    const addedAfterResult = addedAfterFilter(req.query.addedAfter);
+    if (addedAfterResult.error) {
+      return res.status(400).json({ message: addedAfterResult.error });
+    }
+    if (Object.keys(addedAfterResult).length > 0) {
+      filter = { ...filter, ...addedAfterResult };
+    }
+
+    if (excludeIds.length) {
+      // Only well-formed ids can be excluded; a malformed one is ignored
+      // rather than making Mongo throw a CastError.
+      const valid = excludeIds.filter((id) => mongoose.isValidObjectId(id));
+      if (valid.length) filter._id = { $nin: valid };
+    }
     const [players, total, allCount, pendingCount] = await Promise.all([
       Player.find(filter).sort({ createdAt: -1 }).skip(parsed.skip).limit(parsed.limit).select('-image').lean(),
       Player.countDocuments(filter),
@@ -205,19 +278,40 @@ exports.updatePlayer = async (req, res) => {
     }
 
     if (!isMongoConnected()) {
+      const existing = getStorePlayers().find((p) => String(p._id) === String(req.params.id));
+      if (!existing) {
+        return res.status(404).json({ message: 'Player not found' });
+      }
       const player = updateStorePlayer(req.params.id, updateData);
       if (!player) {
         return res.status(404).json({ message: 'Player not found' });
       }
+      // The fallback store stores the player NAME — sync owner references too.
+      // The fallback store keeps no pre-update name, so compare against the
+      // record fetched above before syncing name references.
+      if (player.name !== existing.name) {
+        await renamePlayerReferences(existing.name, player.name);
+      }
       return res.json(player);
     }
 
-    const player = await Player.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!player) {
+    // Read the player's current name before the update — any rename must follow
+    // through to every place that stores the player by NAME (owner captain /
+    // vice-captain and owner squad).
+    const oldName = player.name;
+
+    const updated = await Player.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!updated) {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    res.json(player);
+    if (updated.name !== oldName) {
+      // A rename must follow through to every place that stores the player by
+      // NAME (owner captain / vice-captain and owner squad).
+      await renamePlayerReferences(oldName, updated.name);
+    }
+
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update player', error: error.message });
   }
@@ -226,10 +320,15 @@ exports.updatePlayer = async (req, res) => {
 exports.deletePlayer = async (req, res) => {
   try {
     if (!isMongoConnected()) {
+      // The name is needed before the player is gone - the owner records
+      // hold the captain / vice-captain as a NAME.
+      const existing = getStorePlayers().find((p) => String(p._id) === String(req.params.id));
       const deleted = deleteStorePlayer(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: 'Player not found' });
       }
+      // The squad and the leadership must not keep a deleted player.
+      await removePlayerFromAuctions(req.params.id, existing?.name || '');
       return res.json({ message: 'Player deleted' });
     }
 
@@ -237,6 +336,9 @@ exports.deletePlayer = async (req, res) => {
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
     }
+
+    // The squad and the leadership must not keep a deleted player.
+    await removePlayerFromAuctions(req.params.id, player.name || '');
 
     res.json({ message: 'Player deleted' });
   } catch (error) {

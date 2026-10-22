@@ -7,7 +7,9 @@ const {
   parsePagination,
   statusFilter,
   matchesStatus,
-  countByStatus
+  countByStatus,
+  addedAfterFilter,
+  matchesAddedAfter
 } = require('../utils/queryHelper');
 
 test('parsePagination uses defaults when no query params are given', () => {
@@ -68,6 +70,36 @@ test('matchesStatus treats missing status as approved (legacy documents)', () =>
   assert.equal(matchesStatus({}, 'approved'), true);
   assert.equal(matchesStatus({ status: 'approved' }, 'approved'), true);
   assert.equal(matchesStatus({ status: 'pending' }, undefined), true);
+});
+
+test('addedAfterFilter builds a createdAt $gte filter for valid dates', () => {
+  assert.deepEqual(addedAfterFilter('2026-01-01'), { createdAt: { $gte: new Date('2026-01-01') } });
+  assert.deepEqual(addedAfterFilter('2026-06-15T12:00:00Z'), { createdAt: { $gte: new Date('2026-06-15T12:00:00Z') } });
+  assert.deepEqual(addedAfterFilter(''), {});
+  assert.deepEqual(addedAfterFilter(undefined), {});
+  assert.deepEqual(addedAfterFilter(null), {});
+});
+
+test('addedAfterFilter rejects unparseable dates', () => {
+  assert.ok(addedAfterFilter('not-a-date').error);
+  assert.ok(addedAfterFilter('2026-13-40').error);
+});
+
+test('matchesAddedAfter compares adding time against the given date', () => {
+  const player = { _id: 'p1', name: 'A', createdAt: new Date('2026-05-01T00:00:00Z') };
+  assert.equal(matchesAddedAfter(player, '2026-04-01'), true);
+  assert.equal(matchesAddedAfter(player, '2026-05-01'), true);
+  assert.equal(matchesAddedAfter(player, '2026-05-02'), false);
+});
+
+test('matchesAddedAfter treats empty value as matching', () => {
+  assert.equal(matchesAddedAfter({ createdAt: new Date('2026-01-01') }, ''), true);
+  assert.equal(matchesAddedAfter({ createdAt: new Date('2026-01-01') }, undefined), true);
+});
+
+test('matchesAddedAfter returns false for unparseable dates', () => {
+  assert.equal(matchesAddedAfter({ createdAt: new Date('2026-01-01') }, 'garbage'), false);
+ 
 });
 
 test('countByStatus counts pending separately and the rest as approved', () => {

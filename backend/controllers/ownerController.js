@@ -1,5 +1,7 @@
 const Owner = require('../models/Owner');
-const { isMongoConnected, getOwners: getStoreOwners, createOwner: createStoreOwner, updateOwner: updateStoreOwner, deleteOwner: deleteStoreOwner } = require('../config/fallbackStore');
+const Team = require('../models/Team');
+const Player = require('../models/Player');
+const { isMongoConnected, getOwners: getStoreOwners, createOwner: createStoreOwner, updateOwner: updateStoreOwner, deleteOwner: deleteStoreOwner, getPlayers: getStorePlayers, getTeams: getStoreTeams } = require('../config/fallbackStore');
 const { fileToDataUrl, resolveImageInput } = require('../utils/imageHelper');
 
 const trimField = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -20,6 +22,42 @@ const sanitizeLeaderName = (value) => {
   return name;
 };
 
+// The squad is a list of player NAMES. It is sanitized exactly like the
+// captain / vice-captain name fields, and duplicates are dropped.
+const sanitizeSquad = (value) => {
+  if (!Array.isArray(value)) return [];
+  const names = value
+    .map((name) => sanitizeLeaderName(name))
+    .filter(Boolean);
+  return [...new Set(names)];
+};
+
+// The squad is submitted as a JSON string (the form is a FormData upload),
+// but a plain array is accepted too.
+const parseSquad = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (Array.isArray(value)) return sanitizeSquad(value);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return sanitizeSquad(parsed);
+    } catch (e) {
+      // Not JSON - treat it as a single name.
+      return sanitizeSquad([trimmed]);
+    }
+  }
+  return [];
+};
+
+// A squad is capped at 15 players (a full football squad). Duplicates were already
+// removed by sanitizeSquad above, so a size breach is a hard reject.
+const MAX_SQUAD_PLAYERS = 15;
+
+// Captain / vice-captain are player NAMES — guard against corrupted records
+// where an image data URL ended up in these fields (renders as base64 text).
+
 const validateLeadership = (captain, viceCaptain) => {
   if (captain && viceCaptain && captain.toLowerCase() === viceCaptain.toLowerCase()) {
     return 'Captain and Vice Captain must be different';
@@ -38,6 +76,7 @@ exports.getOwners = async (req, res) => {
       const obj = o && typeof o.toObject === 'function' ? o.toObject() : { ...o };
       obj.captain = sanitizeLeaderName(obj.captain);
       obj.viceCaptain = sanitizeLeaderName(obj.viceCaptain);
+      obj.players = sanitizeSquad(obj.players);
       if (obj.displayOrder === undefined || obj.displayOrder === null) obj.displayOrder = 0;
       delete obj.image;
       return obj;
@@ -104,31 +143,106 @@ exports.getOwnerImage = async (req, res) => {
   }
 };
 
+// Keep the owner's Team document in sync with their squad/captain/vice-captain so
+// the public Teams page renders it with the owner's logo, team name and leaders.
+async function syncOwnerTeam(owner) {
+  if (!owner || !owner._id) return;
+  // Owner now stores player IDs (not names), so resolve directly. Legacy
+  // name-based values are still tolerated by looking them up by name.
+  const squadIds = sanitizeSquad(owner.players || []);
+  const captainRaw = sanitizeLeaderName(owner.captain);
+  const viceCaptainRaw = sanitizeLeaderName(owner.viceCaptain);
+
+  if (!isMongoConnected()) {
+    const players = getStorePlayers();
+    const byId = new Map(players.map((p) => [String(p._id), p]));
+    const byName = new Map(players.map((p) => [String(p.name || '').trim().toLowerCase(), p]));
+    const resolveId = (value) => {
+      if (!value) return null;
+      if (byId.has(String(value))) return value;
+      return byName.get(String(value).trim().toLowerCase())?._id || null;
+    };
+    const playerIds = [...new Set(squadIds.map((v) => resolveId(v)).filter(Boolean))];
+    const captainId = resolveId(captainRaw);
+    const viceCaptainId = resolveId(viceCaptainRaw);
+    const teams = getStoreTeams();
+    const payload = {
+      _id: teams.find((t) => String(t.owner) === String(owner._id))?._id || `team-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      owner: owner._id,
+      name: trimField(owner.team) || trimField(owner.name),
+      logo: owner.image || '',
+      captain: captainId,
+      viceCaptain: viceCaptainId,
+      players: playerIds.map((id) => ({ player: id, joinedAt: new Date() }))
+    };
+    const idx = teams.findIndex((t) => String(t.owner) === String(owner._id));
+    if (idx === -1) teams.unshift(payload);
+    else teams[idx] = { ...teams[idx], ...payload };
+    return;
+  }
+
+  const allPlayers = await Player.find().select('_id name').lean();
+  const byId = new Map(allPlayers.map((p) => [String(p._id), p._id]));
+  const byName = new Map(allPlayers.map((p) => [String(p.name || '').trim().toLowerCase(), p._id]));
+  const resolveId = (value) => {
+    if (!value) return null;
+    if (byId.has(String(value))) return value;
+    return byName.get(String(value).trim().toLowerCase()) || null;
+  };
+  const playerIds = [...new Set(squadIds.map((v) => resolveId(v)).filter(Boolean))];
+  const captainId = resolveId(captainRaw);
+  const viceCaptainId = resolveId(viceCaptainRaw);
+
+  await Team.findOneAndUpdate(
+    { owner: owner._id },
+    {
+      owner: owner._id,
+      name: trimField(owner.team) || trimField(owner.name),
+      logo: owner.image || '',
+      captain: captainId,
+      viceCaptain: viceCaptainId,
+      players: playerIds.map((id) => ({ player: id, joinedAt: new Date() }))
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+}
 exports.createOwner = async (req, res) => {
   try {
+    const captain = sanitizeLeaderName(req.body.captain);
+    const viceCaptain = sanitizeLeaderName(req.body.viceCaptain);
+    const players = parseSquad(req.body.players) || [];
+    // The captain and the vice captain are always part of the squad: when a
+    // squad is provided without them they are added automatically instead of
+    // rejecting the save, so a leader can never end up outside their own team.
+    const squad = [...new Set([...players, ...(captain ? [captain] : []), ...(viceCaptain ? [viceCaptain] : [])])];
+
     const payload = {
       name: req.body.name,
       phone: req.body.phone,
       team: trimField(req.body.team),
-      captain: sanitizeLeaderName(req.body.captain),
-      viceCaptain: sanitizeLeaderName(req.body.viceCaptain),
+      captain,
+      viceCaptain,
+      players: squad,
       image: fileToDataUrl(req.file)
     };
-
-    const order = parseDisplayOrder(req.body.displayOrder);
-    if (order !== undefined) payload.displayOrder = order;
 
     const leadershipError = validateLeadership(payload.captain, payload.viceCaptain);
     if (leadershipError) {
       return res.status(400).json({ message: leadershipError });
     }
 
+    if (squad.length > MAX_SQUAD_PLAYERS) {
+      return res.status(400).json({ message: `Squad cannot exceed ${MAX_SQUAD_PLAYERS} players` });
+    }
+
     if (!isMongoConnected()) {
       const owner = createStoreOwner(payload);
+      await syncOwnerTeam(owner);
       return res.status(201).json(owner);
     }
 
     const owner = await Owner.create(payload);
+    await syncOwnerTeam(owner);
     res.status(201).json(owner);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create owner', error: error.message });
@@ -145,6 +259,10 @@ exports.updateOwner = async (req, res) => {
       viceCaptain: req.body.viceCaptain !== undefined ? sanitizeLeaderName(req.body.viceCaptain) : undefined
     };
 
+    // A squad update replaces the whole squad (empty array = clear it).
+    const squad = parseSquad(req.body.players);
+    if (squad !== undefined) updateData.players = squad;
+
     const order = parseDisplayOrder(req.body.displayOrder);
     if (order !== undefined) updateData.displayOrder = order;
 
@@ -153,29 +271,45 @@ exports.updateOwner = async (req, res) => {
       if (updateData[key] === undefined) delete updateData[key];
     });
 
+    // Load the stored owner once so partial updates (e.g. only the squad is
+    // changed) can be validated against the captain / vice captain / squad that
+    // are already on record.
+    let existing = null;
+    try {
+      if (!isMongoConnected()) {
+        existing = getStoreOwners().find((o) => String(o._id) === String(req.params.id)) || null;
+      } else {
+        existing = await Owner.findById(req.params.id);
+      }
+    } catch (e) {
+      existing = null;
+    }
+
     // Validate against merged values so partial updates (only captain or only
     // viceCaptain) still reject C === VC correctly.
-    let mergedCaptain = updateData.captain;
-    let mergedViceCaptain = updateData.viceCaptain;
-    if (mergedCaptain === undefined || mergedViceCaptain === undefined) {
-      try {
-        let existing = null;
-        if (!isMongoConnected()) {
-          existing = getStoreOwners().find((o) => String(o._id) === String(req.params.id)) || null;
-        } else {
-          existing = await Owner.findById(req.params.id);
-        }
-        if (mergedCaptain === undefined) mergedCaptain = existing?.captain || '';
-        if (mergedViceCaptain === undefined) mergedViceCaptain = existing?.viceCaptain || '';
-      } catch (e) {
-        if (mergedCaptain === undefined) mergedCaptain = '';
-        if (mergedViceCaptain === undefined) mergedViceCaptain = '';
-      }
-    }
+    let mergedCaptain = updateData.captain !== undefined ? updateData.captain : (existing?.captain || '');
+    let mergedViceCaptain = updateData.viceCaptain !== undefined ? updateData.viceCaptain : (existing?.viceCaptain || '');
+    let mergedSquad = updateData.players !== undefined ? updateData.players : sanitizeSquad(existing?.players || []);
 
     const leadershipError = validateLeadership(mergedCaptain, mergedViceCaptain);
     if (leadershipError) {
       return res.status(400).json({ message: leadershipError });
+    }
+
+    // The captain and the vice captain are always part of the squad. When a
+    // squad is provided without them they are added automatically instead of
+    // rejecting the save, so a leader can never end up outside their own team.
+    if (mergedSquad.length) {
+      for (const leader of [mergedCaptain, mergedViceCaptain]) {
+        if (leader && !mergedSquad.includes(leader)) mergedSquad.push(leader);
+      }
+      updateData.players = mergedSquad;
+    }
+
+    // The squad is capped at 15 players. The auto-included leaders
+    // are counted in the cap, so a squad that grew to 15 can never grow further.
+    if (updateData.players && updateData.players.length > MAX_SQUAD_PLAYERS) {
+      return res.status(400).json({ message: `Squad cannot exceed ${MAX_SQUAD_PLAYERS} players` });
     }
 
     if (req.file && req.file.buffer) {
@@ -190,6 +324,7 @@ exports.updateOwner = async (req, res) => {
       if (!owner) {
         return res.status(404).json({ message: 'Owner not found' });
       }
+      await syncOwnerTeam(owner);
       return res.json(owner);
     }
 
@@ -197,7 +332,7 @@ exports.updateOwner = async (req, res) => {
     if (!owner) {
       return res.status(404).json({ message: 'Owner not found' });
     }
-
+    await syncOwnerTeam(owner);
     res.json(owner);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update owner', error: error.message });
@@ -211,6 +346,10 @@ exports.deleteOwner = async (req, res) => {
       if (!deleted) {
         return res.status(404).json({ message: 'Owner not found' });
       }
+      const teams = getStoreTeams();
+      for (let i = teams.length - 1; i >= 0; i--) {
+        if (String(teams[i].owner) === String(req.params.id)) teams.splice(i, 1);
+      }
       return res.json({ message: 'Owner deleted' });
     }
 
@@ -218,7 +357,7 @@ exports.deleteOwner = async (req, res) => {
     if (!owner) {
       return res.status(404).json({ message: 'Owner not found' });
     }
-
+    await Team.deleteMany({ owner: owner._id });
     res.json({ message: 'Owner deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete owner', error: error.message });

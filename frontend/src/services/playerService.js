@@ -5,6 +5,14 @@ export const getPlayers = async () => {
   return response.data;
 };
 
+export const searchPlayers = async ({ name, role } = {}) => {
+  const params = new URLSearchParams();
+  if (name) params.set('name', name);
+  if (role) params.set('role', role);
+  const response = await api.get(`/players/search?${params.toString()}`);
+  return response.data;
+};
+
 export const createPlayer = async (payload) => {
   const response = await api.post('/players', payload);
   return response.data;
@@ -20,9 +28,16 @@ export const registerPlayer = async (payload) => {
   return response.data;
 };
 
-export const getAllPlayers = async ({ page = 1, limit = 25, status } = {}) => {
+export const getAllPlayers = async ({ page = 1, limit = 25, status, search, exclude } = {}) => {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (status && status !== 'all') params.set('status', status);
+  if (search && String(search).trim()) params.set('search', String(search).trim());
+  // Ids to hide from the list (e.g. the players already on the team). They are
+  // excluded server-side so the pagination totals stay correct.
+  const excludeIds = (Array.isArray(exclude) ? exclude : exclude ? [exclude] : [])
+    .map((id) => String(id))
+    .filter(Boolean);
+  if (excludeIds.length) params.set('exclude', excludeIds.join(','));
   const response = await api.get(`/players/all?${params.toString()}`);
   const body = response.data;
   // Older backends return a bare array (no envelope). Normalize so both shapes

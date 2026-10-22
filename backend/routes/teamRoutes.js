@@ -9,10 +9,12 @@ const {
   createTeam,
   updateTeamPlayers,
   updateTeam,
-  deleteTeam
+  deleteTeam,
+  getTeamsByOwner
 } = require('../controllers/teamController');
 
 router.get('/', getTeams);
+router.get('/owner/:ownerId', getTeamsByOwner);
 router.get('/:id/image', getTeamImage);
 router.get('/:id', getTeam);
 router.post('/', auth, upload.single('logo'), createTeam);

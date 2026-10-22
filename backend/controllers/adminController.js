@@ -29,11 +29,20 @@ exports.loginAdmin = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: admin._id || admin.username, username: admin.username }, process.env.JWT_SECRET || 'upl-super-secret-key', {
-      expiresIn: '8h'
-    });
+    const token = jwt.sign(
+      {
+        id: admin._id || admin.username,
+        username: admin.username,
+        role: admin.role || 'admin'
+      },
+      process.env.JWT_SECRET || 'upl-super-secret-key',
+      { expiresIn: '8h' }
+    );
 
-    res.json({ token, admin: { id: admin._id || admin.username, username: admin.username } });
+    res.json({
+      token,
+      admin: { id: admin._id || admin.username, username: admin.username, role: admin.role || 'admin' }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Login failed', error: error.message });
   }

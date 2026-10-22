@@ -1,149 +1,52 @@
-.page-shell {
-  padding: 2rem 1rem 3rem;
-}
-
-.status-card {
-  padding: 2rem;
-  border-radius: 1rem;
-  background: rgba(255,255,255,0.06);
-  color: #eaf4ff;
-  text-align: center;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.team-header {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-  padding: 1.5rem 2rem;
-  background: linear-gradient(135deg, rgba(46,207,115,0.08), rgba(28,140,86,0.05));
-  border: 1px solid rgba(46,207,115,0.2);
-  border-radius: 1.5rem;
-}
-
-.team-logo-wrap {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 4px solid rgba(46,207,115,0.45);
-  background: rgba(255,255,255,0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.team-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.team-logo-fallback {
-  font-size: 3rem;
-}
-
-.team-info h1 {
-  margin: 0 0 0.5rem;
-  color: white;
-  font-size: 2rem;
-}
-
-.team-info p {
-  margin: 0.25rem 0;
-  color: #cfe9ff;
-  font-size: 0.95rem;
-}
-
-.players-section {
-  margin-bottom: 2rem;
-}
-
-.players-section h2 {
-  color: white;
-  margin: 0 0 1rem;
-  font-size: 1.6rem;
-}
-
-.players-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
-}
-
-.player-card {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 1rem;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-}
-
-.player-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(46,207,115,0.15);
-  border-color: rgba(46,207,115,0.3);
-}
-
-.player-card img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  display: block;
-}
-
-.player-card .card-body {
-  padding: 1rem;
-}
-
-.player-card h3 {
-  margin: 0 0 0.5rem;
-  color: white;
-  font-size: 1.05rem;
-}
-
-.player-card p {
-  margin: 0.25rem 0;
-  color: #b8f3cf;
-  font-size: 0.85rem;
-}
-
+.page-shell { padding: 2rem 1rem 3rem; }
+.status-card { padding: 2rem; border-radius: 1rem; background: rgba(255,255,255,0.06); color: #eaf4ff; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
+.team-header { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 1rem; margin-bottom: 2rem; padding: 1.75rem 2rem; background: linear-gradient(135deg, rgba(46,207,115,0.08), rgba(28,140,86,0.05)); border: 1px solid rgba(46,207,115,0.2); border-radius: 1.5rem; text-align: center; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
+.info-box { flex: 1 1 260px; background: rgba(255,255,255,0.06); border: 1px solid rgba(46,207,115,0.25); border-radius: 1rem; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; min-height: 90px; }
+.team-box { flex-direction: column; }
+.team-box h1 { margin: 0; font-size: 1.6rem; }
+.team-box p { margin: 0.25rem 0 0; }
+.owner-box { flex-direction: row; flex-wrap: wrap; }
+.owner-details { text-align: left; }
+.owner-details p { margin: 0.15rem 0; }
+.team-logo-wrap { width: 130px; height: 130px; border-radius: 50%; overflow: hidden; border: 4px solid rgba(46,207,115,0.45); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.team-logo { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+.team-logo-fallback { font-size: 3rem; }
+.team-info h1 { margin: 0 0 0.5rem; color: white; font-size: 2rem; }
+.team-info p { margin: 0.25rem 0; color: #cfe9ff; font-size: 0.95rem; }
+.owner-block { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.owner-preview-btn { border: none; background: transparent; padding: 0; cursor: pointer; }
+.owner-mini-photo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: center; border: 2px solid rgba(46, 207, 115, 0.45); }
+.owner-details p { margin: 0.15rem 0; }
+.leadership-section { margin-bottom: 2rem; }
+.leadership-section h2 { color: white; margin: 0 0 1rem; font-size: 1.6rem; }
+.leaders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+.leader-card { background: linear-gradient(160deg, rgba(46, 207, 115, 0.12), rgba(255, 255, 255, 0.04)); border: 1px solid rgba(46, 207, 115, 0.3); border-radius: 1rem; overflow: hidden; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; align-items: center; gap: 1rem; padding: 1rem; }
+.leader-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(46, 207, 115, 0.18); }
+.leader-card img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; object-position: center; display: block; border: 3px solid rgba(46, 207, 115, 0.45); flex-shrink: 0; }
+.leader-card .card-body { padding: 0; flex: 1; min-width: 0; }
+.leader-card h3 { margin: 0 0 0.5rem; color: white; font-size: 1.05rem; }
+.leader-card p { margin: 0.25rem 0; color: #b8f3cf; font-size: 0.85rem; }
+.leader-badge { display: inline-block; margin-bottom: 0.4rem; padding: 0.2rem 0.6rem; border-radius: 999px; background: rgba(46, 207, 115, 0.25); color: #2ecf73; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.leader-badge.vice { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+.players-section { margin-bottom: 2rem; }
+.players-section h2 { color: white; margin: 0 0 1rem; font-size: 1.6rem; }
+.players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.player-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 1rem; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; text-align: center; padding: 1rem 0.75rem 0.75rem; }
+.player-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(46,207,115,0.15); border-color: rgba(46,207,115,0.3); }
+.player-card img { width: 104px; height: 104px; border-radius: 50%; object-fit: cover; object-position: center; display: block; margin: 0 auto 0.75rem; border: 3px solid rgba(46,207,115,0.4); }
+.player-card .card-body { padding: 0.5rem 0.25rem 0; }
+.player-card h3 { margin: 0 0 0.5rem; color: white; font-size: 1.05rem; }
+.player-card p { margin: 0.25rem 0; color: #b8f3cf; font-size: 0.85rem; }
 @media (max-width: 700px) {
-  .page-shell {
-    padding: 1.2rem 0.7rem 2rem;
-  }
-
-  .team-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 1.2rem;
-    gap: 1rem;
-  }
-
-  .team-logo-wrap {
-    width: 90px;
-    height: 90px;
-    margin: 0 auto;
-  }
-
-  .team-logo-fallback {
-    font-size: 2.5rem;
-  }
-
-  .team-info h1 {
-    font-size: 1.6rem;
-    text-align: center;
-  }
-
-  .team-info p {
-    text-align: center;
-  }
-
-  .players-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
+  .page-shell { padding: 1.2rem 0.7rem 2rem; }
+  .team-header { flex-direction: column; align-items: center; text-align: center; padding: 1.2rem; gap: 1rem; }
+  .team-logo-wrap { width: 110px; height: 110px; margin: 0 auto; }
+  .team-info h1 { font-size: 1.6rem; text-align: center; }
+  .team-info p { text-align: center; }
+  .owner-block { flex-direction: column; align-items: center; text-align: center; }
+  .leaders-grid { grid-template-columns: 1fr; }
+  .leader-card { flex-direction: column; text-align: center; align-items: center; }
+  .leader-card img { width: 80px; height: 80px; }
+  .players-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .player-card img { width: 88px; height: 88px; }
 }

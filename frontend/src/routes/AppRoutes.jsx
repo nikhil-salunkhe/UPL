@@ -10,7 +10,6 @@ import Sponsors from '../pages/Sponsors/Sponsors';
 import Matches from '../pages/Matches/Matches';
 import AdminLogin from '../pages/Admin/AdminLogin';
 import AdminDashboard from '../pages/Admin/AdminDashboard';
-
 // Shows briefly on mount and on every route change (key remounts it).
 // Kept as its own component so no setState happens synchronously inside an effect.
 const PageLoader = () => {

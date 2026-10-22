@@ -272,11 +272,21 @@ const Home = () => {
           <div className="teams-grid">
             {[...owners]
               .sort((a, b) => (Number(a.displayOrder) || 0) - (Number(b.displayOrder) || 0))
-              .map((owner) => {
-                const captain = cleanLeaderName(owner.captain);
-              const viceCaptain = cleanLeaderName(owner.viceCaptain);
-              const captainPlayer = captain ? players.find((player) => player.name === captain) : undefined;
-              const viceCaptainPlayer = viceCaptain ? players.find((player) => player.name === viceCaptain) : undefined;
+             .map((owner) => {
+                 const resolveLeader = (value) => {
+                   const clean = cleanLeaderName(value);
+                   if (!clean) return { name: '', player: undefined };
+                   const byId = players.find((player) => String(player._id) === String(clean));
+                   if (byId) return { name: byId.name, player: byId };
+                   const byName = players.find((player) => player.name === clean);
+                   return { name: clean, player: byName };
+                 };
+                 const captainInfo = resolveLeader(owner.captain);
+                 const viceCaptainInfo = resolveLeader(owner.viceCaptain);
+                 const captain = captainInfo.name;
+                 const viceCaptain = viceCaptainInfo.name;
+                 const captainPlayer = captainInfo.player;
+                 const viceCaptainPlayer = viceCaptainInfo.player;
               const ownerImage = getOwnerImageSrc(owner);
 
               return (

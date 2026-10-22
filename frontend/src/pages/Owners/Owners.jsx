@@ -35,10 +35,27 @@ const Owners = () => {
   const [loading, setLoading] = useState(true);
   const [previewOwner, setPreviewOwner] = useState(null);
 
-  const playersByName = useMemo(
-    () => Object.fromEntries(players.map((player) => [player.name, player])),
-    [players]
-  );
+  const playersById = useMemo(() => {
+    const map = {};
+    players.forEach((player) => {
+      if (player?._id) map[String(player._id)] = player;
+    });
+    return map;
+  }, [players]);
+
+  const playersByName = useMemo(() => {
+    const map = {};
+    players.forEach((player) => {
+      if (player?.name) map[String(player.name).trim().toLowerCase()] = player;
+    });
+    return map;
+  }, [players]);
+
+  const findPlayer = (value) => {
+    const clean = String(value || '').trim();
+    if (playersById[clean]) return playersById[clean];
+    return playersByName[clean.toLowerCase()];
+  };
 
   useEffect(() => {
     const loadOwners = async () => {
@@ -56,20 +73,25 @@ const Owners = () => {
     loadOwners();
   }, []);
 
-  const renderLeader = (name) => {
-    const clean = cleanLeaderName(name);
+  const renderLeader = (value) => {
+    const clean = cleanLeaderName(value);
     if (!clean) {
       return <span className="leader-empty">TBD</span>;
     }
+    const player = findPlayer(clean);
+    const displayName = player?.name || clean;
     return (
       <span className="player-cell">
-        <PlayerAvatar player={playersByName[clean]} name={clean} size={32} />
-        {clean}
+        <PlayerAvatar player={player} name={displayName} size={32} />
+        {displayName}
       </span>
     );
   };
 
+
   return (
+
+
     <div className="page-shell">
       <section className="page-header">
         <div>
@@ -92,6 +114,7 @@ const Owners = () => {
                 <th>Team</th>
                 <th>Captain</th>
                 <th>Vice Captain</th>
+
                 <th>Phone</th>
               </tr>
             </thead>
@@ -119,6 +142,7 @@ const Owners = () => {
                   <td>{owner.team || <span className="team-pending">—</span>}</td>
                   <td>{owner.captain ? renderLeader(owner.captain) : <span className="leader-empty">TBD</span>}</td>
                   <td>{owner.viceCaptain ? renderLeader(owner.viceCaptain) : <span className="leader-empty">TBD</span>}</td>
+
                   <td>{owner.phone}</td>
                 </tr>
               ))}

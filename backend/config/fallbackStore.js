@@ -9,6 +9,7 @@ const initialState = {
   players: [],
   owners: [],
   teams: [],
+  auctions: [],
   sponsors: [],
   advertisements: [],
   rules: [],
@@ -83,7 +84,7 @@ function getPlayers() {
 }
 
 function createPlayer(payload) {
-  const player = { _id: createSampleId('player'), ...payload };
+  const player = { _id: createSampleId('player'), ...payload, createdAt: payload.createdAt || Date.now() };
   getState().players.unshift(player);
   return player;
 }
@@ -284,7 +285,35 @@ function deleteTeam(id) {
   const index = teams.findIndex((t) => t._id === id || t._id?.toString() === id);
   if (index === -1) return false;
   teams.splice(index, 1);
+  // The team's auction result has no meaning without the team.
+  const auctions = getState().auctions;
+  const auctionIndex = auctions.findIndex((a) => String(a.team) === String(id));
+  if (auctionIndex !== -1) auctions.splice(auctionIndex, 1);
   return true;
+}
+
+function getAuctions() {
+  return getState().auctions;
+}
+
+// Upsert by team: a team has at most one auction result.
+function setAuctionResult(teamId, payload) {
+  const auctions = getState().auctions;
+  const index = auctions.findIndex((a) => String(a.team) === String(teamId));
+  const record = {
+    _id: index === -1 ? createSampleId('auction') : auctions[index]._id,
+    ...(index === -1 ? {} : auctions[index]),
+    ...payload,
+    team: teamId,
+    createdAt: index === -1 ? new Date() : auctions[index].createdAt
+  };
+  if (index === -1) auctions.unshift(record);
+  else auctions[index] = record;
+  return record;
+}
+
+function getAuctionByTeam(teamId) {
+  return getAuctions().find((a) => String(a.team) === String(teamId)) || null;
 }
 
 module.exports = {
@@ -306,6 +335,9 @@ module.exports = {
   createTeam,
   updateTeam,
   deleteTeam,
+  getAuctions,
+  setAuctionResult,
+  getAuctionByTeam,
   getSponsors,
   createSponsor,
   updateSponsor,
