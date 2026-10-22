@@ -252,12 +252,14 @@
   .players-table td:nth-child(3) {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+
     font-weight: 700;
     font-size: 1.02rem;
     line-height: 1.25;
     color: #ffffff;
+    white-space: normal;
+    word-break: break-word;
   }
 
   .players-table td:nth-child(4) {
