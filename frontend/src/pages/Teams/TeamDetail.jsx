@@ -171,7 +171,7 @@ const TeamDetail = () => {
           <div className="status-card">No additional squad players.</div>
         ) : (
           <div className="players-grid">
-            {playersWithPhotos(squadPlayers).map((player) => (
+            {playersWithPhotos(squadPlayers).map((player, index) => (
               <article
                 key={player._id}
                 className="player-card"
@@ -187,6 +187,7 @@ const TeamDetail = () => {
                   onError={handleImageError}
                 />
                 <div className="card-body">
+                  <span className="player-number">{index + 1}</span>
                   <h3>{player.name}</h3>
                   <p><strong>Role:</strong> {player.role}</p>
                   {player.age != null && <p><strong>Age:</strong> {player.age}</p>}

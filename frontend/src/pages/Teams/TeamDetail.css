@@ -36,6 +36,7 @@
 .player-card img { width: 104px; height: 104px; border-radius: 50%; object-fit: cover; object-position: center; display: block; margin: 0 auto 0.75rem; border: 3px solid rgba(46,207,115,0.4); }
 .player-card .card-body { padding: 0.5rem 0.25rem 0; }
 .player-card h3 { margin: 0 0 0.5rem; color: white; font-size: 1.05rem; }
+.player-number { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6rem; height: 1.6rem; margin-right: 0.4rem; border-radius: 50%; background: rgba(46, 207, 115, 0.25); color: #2ecf73; font-size: 0.8rem; font-weight: 700; vertical-align: middle; }
 .player-card p { margin: 0.25rem 0; color: #b8f3cf; font-size: 0.85rem; }
 @media (max-width: 700px) {
   .page-shell { padding: 1.2rem 0.7rem 2rem; }

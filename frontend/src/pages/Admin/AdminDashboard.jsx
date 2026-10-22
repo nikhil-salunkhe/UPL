@@ -716,6 +716,25 @@ const AdminDashboard = () => {
   const selectedCaptain = roster.find((player) => player._id === ownerForm.captain);
   const selectedViceCaptain = roster.find((player) => player._id === ownerForm.viceCaptain);
 
+  // Players already assigned to another team (squad, captain or vice-captain)
+  // must not be offered again when editing a different team.
+  const normalizePlayerKey = (value) => String(value || '').trim().toLowerCase();
+  const usedPlayerKeys = new Set();
+  owners.forEach((owner) => {
+    if (editingOwnerId && String(owner._id) === String(editingOwnerId)) return;
+    const addUsed = (value) => {
+      if (value == null || value === '') return;
+      usedPlayerKeys.add(normalizePlayerKey(value));
+    };
+    (Array.isArray(owner.players) ? owner.players : []).forEach(addUsed);
+    addUsed(owner.captain);
+    addUsed(owner.viceCaptain);
+  });
+  const isPlayerUsedElsewhere = (player) =>
+    usedPlayerKeys.has(normalizePlayerKey(player?._id)) ||
+    usedPlayerKeys.has(normalizePlayerKey(player?.name));
+  const availableRoster = roster.filter((player) => !isPlayerUsedElsewhere(player));
+
   return (
     <div className="admin-dashboard">
       <aside className="sidebar">
@@ -842,7 +861,7 @@ const AdminDashboard = () => {
               <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Captain (select from added players)</label>
               <select value={ownerForm.captain} onChange={(e) => setOwnerForm({ ...ownerForm, captain: e.target.value })}>
                 <option value="">-- Select Captain --</option>
-                {roster.map((player) => (
+                {availableRoster.map((player) => (
                   <option key={player._id} value={player._id} disabled={player._id === ownerForm.viceCaptain}>
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
@@ -854,7 +873,7 @@ const AdminDashboard = () => {
               <label style={{ fontSize: '0.8rem', color: '#ffd96f' }}>Vice Captain (select from added players)</label>
               <select value={ownerForm.viceCaptain} onChange={(e) => setOwnerForm({ ...ownerForm, viceCaptain: e.target.value })}>
                 <option value="">-- Select Vice Captain --</option>
-                {roster.map((player) => (
+                {availableRoster.map((player) => (
                   <option key={player._id} value={player._id} disabled={player._id === ownerForm.captain}>
                     {player.name}{player.team ? ` — ${player.team}` : ''}
                   </option>
@@ -878,7 +897,7 @@ const AdminDashboard = () => {
                   style={{ flex: '1 1 12rem', minWidth: '10rem' }}
                 >
                   <option value="">-- Select Player to Add --</option>
-                  {roster
+                  {availableRoster
                     .filter((player) => !squadNames.includes(player._id))
                     .filter((player) => player.name.toLowerCase().includes(squadPlayerSearch.trim().toLowerCase()))
                     .map((player) => (

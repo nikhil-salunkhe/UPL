@@ -51,9 +51,9 @@ const parseSquad = (value) => {
   return [];
 };
 
-// A squad is capped at 15 players (a full football squad). Duplicates were already
+// A squad is capped at 20 players (a full football squad). Duplicates were already
 // removed by sanitizeSquad above, so a size breach is a hard reject.
-const MAX_SQUAD_PLAYERS = 15;
+const MAX_SQUAD_PLAYERS = 20;
 
 // Captain / vice-captain are player NAMES — guard against corrupted records
 // where an image data URL ended up in these fields (renders as base64 text).
