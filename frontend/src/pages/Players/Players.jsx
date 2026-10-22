@@ -43,8 +43,14 @@ const cleanLeaderName = (name) => {
 // record — derive their team from it instead of showing "Auction Pending".
 const getPlayerTeam = (player, owners) => {
   if (player.team) return player.team;
-  const owner = owners.find(
-    (o) => cleanLeaderName(o.captain) === player.name || cleanLeaderName(o.viceCaptain) === player.name
+const owner = owners.find(
+    (o) =>
+      cleanLeaderName(o.captain) === player.name ||
+      cleanLeaderName(o.viceCaptain) === player.name ||
+      (Array.isArray(o.players) &&
+        o.players.some(
+          (p) => String(p) === String(player._id) || cleanLeaderName(p) === player.name
+        ))
   );
   return owner?.team || '';
 };

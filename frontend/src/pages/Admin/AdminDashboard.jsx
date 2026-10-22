@@ -716,6 +716,15 @@ const AdminDashboard = () => {
   const selectedCaptain = roster.find((player) => player._id === ownerForm.captain);
   const selectedViceCaptain = roster.find((player) => player._id === ownerForm.viceCaptain);
 
+  const getPlayerTeam = (player) => {
+    if (player?.team) return player.team;
+    const owner = owners.find((o) => {
+      if (cleanLeaderName(o.captain) === player?.name || cleanLeaderName(o.viceCaptain) === player?.name) return true;
+      return Array.isArray(o.players) && o.players.some((p) => String(p) === String(player?._id) || cleanLeaderName(p) === player?.name);
+    });
+    return owner?.team || '';
+  };
+
   // Players already assigned to another team (squad, captain or vice-captain)
   // must not be offered again when editing a different team.
   const normalizePlayerKey = (value) => String(value || '').trim().toLowerCase();
@@ -822,7 +831,7 @@ const AdminDashboard = () => {
                   <PlayerAvatar player={player} name={player.name} size={34} />
                   <div>
                     <strong><span style={{ color: '#2ecf73' }}>#{playerNumberOffset + index + 1}</span> {player.name}</strong>
-                    <p>{player.role}{player.team ? ` • ${player.team}` : ''}</p>
+                    <p>{player.role}{getPlayerTeam(player) ? ` • ${getPlayerTeam(player)}` : ''}</p>
                   </div>
                   <div className="admin-actions">
                     {player.status === 'pending' ? (

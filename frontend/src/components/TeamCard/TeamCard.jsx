@@ -37,7 +37,7 @@ const TeamCard = ({ team, players = [] }) => {
         </div>
         <div className="card-body">
           <h3>{team.name}</h3>
-          <p><strong>Players:</strong> {teamPlayers.length}</p>
+          <p><strong>Players:</strong> {team.players?.length || 0}</p>
           {renderLeader('Captain', captain)}
           {renderLeader('Vice Captain', viceCaptain)}
           <Link to={`/teams/${team._id}`} className="team-view-btn">View Team →</Link>
@@ -59,7 +59,7 @@ const TeamCard = ({ team, players = [] }) => {
       </div>
       <div className="card-body">
         <h3>{team.name}</h3>
-        <p><strong>Players:</strong> {teamPlayers.length}</p>
+        <p><strong>Players:</strong> {team.players?.length || 0}</p>
         {renderLeader('Captain', captain)}
         {renderLeader('Vice Captain', viceCaptain)}
         <Link to={`/teams/${team._id}`} className="team-view-btn">View Team →</Link>
@@ -69,3 +69,4 @@ const TeamCard = ({ team, players = [] }) => {
 };
 
 export default TeamCard;
+
