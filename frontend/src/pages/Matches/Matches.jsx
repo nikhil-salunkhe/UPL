@@ -17,7 +17,14 @@ const Matches = () => {
     const loadData = async () => {
       try {
         const [matchData, tournamentData, ownersData] = await Promise.all([getMatches(), getTournament(), getOwners()]);
-        setMatches(matchData);
+        const sortedMatches = [...(Array.isArray(matchData) ? matchData : [])].sort((a, b) => {
+          const ca = new Date(a?.createdAt);
+          const cb = new Date(b?.createdAt);
+          const createdDiff = (isNaN(ca.getTime()) ? 0 : ca.getTime()) - (isNaN(cb.getTime()) ? 0 : cb.getTime());
+          if (createdDiff !== 0) return createdDiff;
+          return String(a?._id || '').localeCompare(String(b?._id || ''));
+        });
+        setMatches(sortedMatches);
         setTournament(tournamentData);
 
         // Build team logo map: team name → image URL

@@ -3,11 +3,29 @@ const { isMongoConnected, getMatches, createMatch, updateMatch, deleteMatch } = 
 
 exports.getMatches = async (req, res) => {
   try {
+    const parseTimeToMinutes = (value) => {
+      const match = String(value || '').trim().match(/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(AM|PM)?$/i);
+      if (!match) return 0;
+      let hours = parseInt(match[1], 10);
+      const minutes = match[2] ? parseInt(match[2], 10) : 0;
+      const meridiem = (match[3] || '').toUpperCase();
+      if (meridiem === 'PM' && hours !== 12) hours += 12;
+      if (meridiem === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    };
+    const sortMatches = (list) => [...(list || [])].sort((a, b) => {
+      const ca = new Date(a?.createdAt);
+      const cb = new Date(b?.createdAt);
+      const createdDiff = (isNaN(ca.getTime()) ? 0 : ca.getTime()) - (isNaN(cb.getTime()) ? 0 : cb.getTime());
+      if (createdDiff !== 0) return createdDiff;
+      // fallback to _id timestamp order
+      return String(a?._id || '').localeCompare(String(b?._id || ''));
+    });
     if (!isMongoConnected()) {
-      return res.json(getMatches());
+      return res.json(sortMatches(getMatches()));
     }
-    const matches = await Match.find().sort({ matchDate: 1, matchTime: 1 });
-    res.json(matches);
+    const matches = await Match.find().lean();
+    res.json(sortMatches(matches));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch matches', error: error.message });
   }
