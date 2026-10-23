@@ -426,6 +426,18 @@ const AdminDashboard = () => {
     setSquadPlayerSearch('');
   };
 
+  const movePlayerInSquad = (playerId, direction) => {
+    setOwnerForm((prev) => {
+      const current = Array.isArray(prev.players) ? [...prev.players] : [];
+      const index = current.indexOf(playerId);
+      if (index < 0) return prev;
+      const nextIndex = direction === 'up' ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= current.length) return prev;
+      [current[index], current[nextIndex]] = [current[nextIndex], current[index]];
+      return { ...prev, players: current };
+    });
+  };
+
   const removePlayerFromSquad = (name) => {
     setOwnerForm((prev) => {
       const current = Array.isArray(prev.players) ? prev.players : [];
@@ -948,6 +960,24 @@ const AdminDashboard = () => {
                           {isViceCaptain && <strong style={{ color: '#ffd96f' }}>VC: </strong>}
                           {player?.name || String(playerId)}
                         </span>
+                        <button
+                          type="button"
+                          title="Move up"
+                          onClick={() => movePlayerInSquad(playerId, 'up')}
+                          disabled={squadNames.indexOf(playerId) === 0}
+                          style={{ background: 'transparent', border: 'none', color: '#9ecbff', cursor: 'pointer', fontSize: '0.9rem', padding: '0 0.15rem', opacity: squadNames.indexOf(playerId) === 0 ? 0.35 : 1 }}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          title="Move down"
+                          onClick={() => movePlayerInSquad(playerId, 'down')}
+                          disabled={squadNames.indexOf(playerId) === squadNames.length - 1}
+                          style={{ background: 'transparent', border: 'none', color: '#9ecbff', cursor: 'pointer', fontSize: '0.9rem', padding: '0 0.15rem', opacity: squadNames.indexOf(playerId) === squadNames.length - 1 ? 0.35 : 1 }}
+                        >
+                          ↓
+                        </button>
                         <button
                           type="button"
                           title={isCaptain || isViceCaptain ? 'Remove (leader will be cleared on save)' : 'Remove'}
