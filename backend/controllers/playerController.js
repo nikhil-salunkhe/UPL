@@ -298,7 +298,11 @@ exports.updatePlayer = async (req, res) => {
     // Read the player's current name before the update — any rename must follow
     // through to every place that stores the player by NAME (owner captain /
     // vice-captain and owner squad).
-    const oldName = player.name;
+    const existingPlayer = await Player.findById(req.params.id);
+    if (!existingPlayer) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+    const oldName = existingPlayer.name;
 
     const updated = await Player.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!updated) {
